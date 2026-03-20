@@ -1,228 +1,157 @@
-import { SplineSceneBasic } from "@/components/ui/demo"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import Image from "next/image"
+'use client';
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { SplineScene } from '@/components/ui/splite';
+import { Spotlight } from '@/components/ui/spotlight';
+import { loadFromStorage } from '@/lib/storage';
 
-// ─── Mini scorecard ──────────────────────────────────────────────────────────
-function FrameCell({
-  frame,
-  score,
-  roll1,
-  roll2,
-  isStrike,
-  isSpare,
-  isCurrent,
-}: {
-  frame: number
-  score: number | null
-  roll1: string
-  roll2?: string
-  isStrike?: boolean
-  isSpare?: boolean
-  isCurrent?: boolean
-}) {
-  return (
-    <div
-      className={`flex-1 border-r border-white/10 last:border-r-0 flex flex-col ${
-        isCurrent ? "bg-lane-wood/10" : ""
-      }`}
-    >
-      <div className="flex justify-end gap-1 px-1 pt-1 min-h-[22px]">
-        {isStrike ? (
-          <span className="text-lane-wood font-bold text-xs">X</span>
-        ) : (
-          <>
-            <span className="text-neutral-400 text-[10px]">{roll1}</span>
-            {roll2 && (
-              <span
-                className={`text-[10px] ${isSpare ? "text-lane-wood font-bold" : "text-neutral-400"}`}
-              >
-                {roll2}
-              </span>
-            )}
-          </>
-        )}
-      </div>
-      <div className="text-center text-white text-xs font-semibold pb-1 min-h-[20px]">
-        {score !== null ? score : ""}
-      </div>
-    </div>
-  )
+function useHeroStats() {
+  const [stats, setStats] = useState({ perfects: 0, high: null as number | null, seasonGames: 0 });
+  useEffect(() => {
+    const data = loadFromStorage();
+    const allScores = Object.values(data.seasonData || {}).flatMap(
+      (games: { score: number }[]) => games.map(g => g.score)
+    );
+    setStats({
+      perfects: allScores.filter(s => s === 300).length,
+      high: allScores.length ? Math.max(...allScores) : null,
+      seasonGames: allScores.length,
+    });
+  }, []);
+  return stats;
 }
 
-// ─── Sample bowler scorecards ─────────────────────────────────────────────────
-const DEMO_BOWLERS = [
-  {
-    name: "RILEY K.",
-    total: 212,
-    frames: [
-      { roll1: "X", isStrike: true, score: 30 },
-      { roll1: "7", roll2: "/", isSpare: true, score: 50 },
-      { roll1: "X", isStrike: true, score: 80 },
-      { roll1: "X", isStrike: true, score: 110 },
-      { roll1: "X", isStrike: true, score: 130 },
-      { roll1: "7", roll2: "2", score: 139 },
-      { roll1: "X", isStrike: true, score: 159 },
-      { roll1: "6", roll2: "/", isSpare: true, score: 179 },
-      { roll1: "X", isStrike: true, score: 202 },
-      { roll1: "X", isStrike: true, score: 212 },
-    ],
-  },
-  {
-    name: "SAM T.",
-    total: 178,
-    frames: [
-      { roll1: "8", roll2: "/", isSpare: true, score: 18 },
-      { roll1: "X", isStrike: true, score: 46 },
-      { roll1: "9", roll2: "0", score: 55 },
-      { roll1: "7", roll2: "/", isSpare: true, score: 73 },
-      { roll1: "X", isStrike: true, score: 96 },
-      { roll1: "6", roll2: "3", score: 105 },
-      { roll1: "X", isStrike: true, score: 130 },
-      { roll1: "X", isStrike: true, score: 153 },
-      { roll1: "7", roll2: "/", isSpare: true, score: 173 },
-      { roll1: "5", roll2: null, isCurrent: true, score: null },
-    ],
-  },
-]
+export default function HomePage() {
+  const stats = useHeroStats();
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
-export default function Home() {
   return (
-    <main className="min-h-screen bg-background">
-      {/* Nav */}
-      <nav className="border-b border-white/10 px-8 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <span className="text-2xl">🎳</span>
-          <span className="font-extrabold tracking-tight text-white text-lg">
-            Strike <em className="not-italic text-lane-wood">Zone</em>
-          </span>
-        </div>
-        <span className="text-xs text-neutral-500 uppercase tracking-widest">
-          Bowling League Tracker
-        </span>
-      </nav>
+    <main style={{ minHeight: '100vh', background: 'var(--bg)' }}>
 
-      {/* Content */}
-      <div className="max-w-6xl mx-auto px-6 py-12 space-y-12">
-        {/* ── Hero / 3-D card ─────────────────────────────────────────────── */}
-        <section>
-          <SplineSceneBasic />
-        </section>
+      {/* ── HERO ── */}
+      <section style={{
+        position: 'relative', width: '100%', minHeight: '420px',
+        background: '#0e0b07', borderBottom: '1px solid var(--border2)',
+        overflow: 'hidden', display: 'flex', alignItems: 'center',
+        justifyContent: 'center', padding: '40px 24px',
+      }}>
+        <Spotlight className="-top-40 left-0 md:left-60 md:-top-20" fill="#c9a227" />
 
-        {/* ── Live Scorecards ─────────────────────────────────────────────── */}
-        <section>
-          <h2 className="text-xs uppercase tracking-[0.3em] text-lane-wood mb-6 font-semibold">
-            Live Scorecards · Week 7
-          </h2>
-          <div className="grid gap-4">
-            {DEMO_BOWLERS.map((bowler) => (
-              <Card
-                key={bowler.name}
-                className="border-white/10 bg-black/60 backdrop-blur"
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="font-bold text-white tracking-wider text-sm">
-                      {bowler.name}
-                    </span>
-                    <span className="text-lane-wood font-extrabold text-xl">
-                      {bowler.total}
-                    </span>
-                  </div>
-                  {/* Frame row */}
-                  <div className="flex border border-white/10 rounded overflow-hidden text-center">
-                    {bowler.frames.map((f, i) => (
-                      <FrameCell
-                        key={i}
-                        frame={i + 1}
-                        score={f.score}
-                        roll1={f.roll1}
-                        roll2={(f as { roll2?: string | null }).roll2 ?? undefined}
-                        isStrike={f.isStrike}
-                        isSpare={f.isSpare}
-                        isCurrent={(f as { isCurrent?: boolean }).isCurrent}
-                      />
-                    ))}
-                  </div>
-                  {/* Frame numbers */}
-                  <div className="flex text-center mt-1">
-                    {bowler.frames.map((_, i) => (
-                      <div
-                        key={i}
-                        className="flex-1 text-[9px] text-neutral-600 font-medium"
-                      >
-                        {i + 1}
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+        {/* dot grid bg */}
+        <div style={{
+          position: 'absolute', inset: 0,
+          backgroundImage: 'radial-gradient(circle, rgba(201,162,39,0.07) 1px, transparent 1px)',
+          backgroundSize: '32px 32px', zIndex: 0, pointerEvents: 'none',
+        }} />
+
+        {/* Card */}
+        <div style={{
+          position: 'relative', zIndex: 2, width: '100%', maxWidth: '900px',
+          display: 'flex', flexDirection: 'row', alignItems: 'center',
+          background: 'rgba(30,25,18,0.85)',
+          border: '1px solid rgba(201,162,39,0.22)',
+          borderRadius: '16px', overflow: 'hidden',
+          backdropFilter: 'blur(6px)',
+          boxShadow: '0 0 60px rgba(0,0,0,0.6), inset 0 1px 0 rgba(201,162,39,0.12)',
+        }}>
+          {/* Left */}
+          <div style={{ flex: '1 1 50%', padding: '40px 36px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <span style={{
+              fontFamily: "'Oswald',sans-serif", fontSize: '0.6rem', fontWeight: 500,
+              letterSpacing: '4px', color: 'var(--gold)', textTransform: 'uppercase',
+            }}>Strike Zone · Bowling League</span>
+
+            <h1 style={{
+              fontFamily: "'Oswald',sans-serif",
+              fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 700,
+              lineHeight: 1.05, color: 'var(--cream)', letterSpacing: '2px',
+            }}>
+              Bowl<br />
+              <em style={{ fontStyle: 'italic', color: 'var(--gold-light)' }}>Perfect.</em>
+            </h1>
+
+            <p style={{
+              fontFamily: "'Lora',serif", fontSize: '0.82rem',
+              color: 'var(--text2)', lineHeight: 1.6, maxWidth: '300px',
+            }}>
+              Track every frame, every strike, every split. Real-time league scoring built for serious bowlers.
+            </p>
+
+            {/* Stat badges */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
+              {[
+                { icon: '🏆', label: 'Perfect Games', value: stats.perfects > 0 ? String(stats.perfects) : '—' },
+                { icon: '⚡', label: 'Season High',   value: stats.high !== null ? String(stats.high) : '—' },
+                { icon: '🎳', label: 'Games Saved',   value: stats.seasonGames > 0 ? String(stats.seasonGames) : '—' },
+              ].map(({ icon, label, value }) => (
+                <div key={label} style={{
+                  display: 'flex', alignItems: 'center', gap: '6px',
+                  background: 'rgba(201,162,39,0.08)', border: '1px solid rgba(201,162,39,0.20)',
+                  borderRadius: '6px', padding: '6px 12px',
+                  fontFamily: "'Oswald',sans-serif", fontSize: '0.7rem',
+                  letterSpacing: '1.5px', color: 'var(--text2)',
+                }}>
+                  <span style={{ fontSize: '0.9rem' }}>{icon}</span>
+                  <span>{label} <strong style={{ color: 'var(--gold-light)' }}>{value}</strong></span>
+                </div>
+              ))}
+            </div>
+
+            <Link href="/tracker" style={{
+              marginTop: '16px', display: 'inline-flex', alignItems: 'center', gap: '8px',
+              background: 'var(--gold)', color: '#0e0b07',
+              fontFamily: "'Oswald',sans-serif", fontWeight: 700, fontSize: '0.85rem',
+              letterSpacing: '2px', textTransform: 'uppercase',
+              padding: '10px 24px', borderRadius: '6px', textDecoration: 'none',
+              width: 'fit-content',
+            }}>
+              Open Tracker →
+            </Link>
           </div>
-        </section>
 
-        {/* ── Team leaderboard ────────────────────────────────────────────── */}
-        <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Right — Spline scene */}
+          <div style={{ flex: '0 0 48%', position: 'relative', height: '320px', overflow: 'hidden' }}>
+            <SplineScene
+              scene="https://prod.spline.design/kZDDjO5HlFTv7Jng/scene.splinecode"
+              className="w-full h-full"
+            />
+            <div style={{
+              position: 'absolute', inset: 0, pointerEvents: 'none',
+              background: 'linear-gradient(90deg, rgba(30,25,18,0.85) 0%, transparent 30%, transparent 70%, rgba(14,11,7,0.6) 100%)',
+            }} />
+          </div>
+        </div>
+      </section>
+
+      {/* ── FEATURE CARDS ── */}
+      <section style={{ padding: '48px 24px', maxWidth: '900px', margin: '0 auto' }}>
+        <h2 style={{
+          fontFamily: "'Oswald',sans-serif", fontSize: '1.1rem', fontWeight: 600,
+          letterSpacing: '3px', color: 'var(--gold)', textTransform: 'uppercase',
+          marginBottom: '24px',
+        }}>Features</h2>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
           {[
-            {
-              team: "Gutter & Sons",
-              score: 390,
-              hcp: 420,
-              img: "https://images.unsplash.com/photo-1562077772-3bd90403f7f0?w=800&auto=format&fit=crop",
-              badge: "Team A",
-            },
-            {
-              team: "Blue Bolts",
-              score: 355,
-              hcp: 398,
-              img: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&auto=format&fit=crop",
-              badge: "Team B",
-            },
-          ].map((t) => (
-            <Card
-              key={t.team}
-              className="overflow-hidden border-white/10 relative"
-            >
-              {/* Background image overlay */}
-              <div className="absolute inset-0">
-                <Image
-                  src={t.img}
-                  alt={t.team}
-                  fill
-                  className="object-cover opacity-10"
-                  sizes="(max-width: 768px) 100vw, 50vw"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent" />
+            { icon: '🎳', title: 'Live Scoring',    desc: 'Frame-by-frame or end-game mode with auto-calculated strikes and spares.' },
+            { icon: '📊', title: 'Season Tracker',  desc: 'Save weekly scores, track averages, season highs, and handicaps.' },
+            { icon: '🔒', title: 'Turn Order Lock', desc: 'Lock bowler rotation and auto-advance through each frame in order.' },
+            { icon: '⚡', title: 'Team Boards',     desc: 'Live Team A vs B scoreboard with handicap totals and differential.' },
+          ].map(card => (
+            <Link key={card.title} href="/tracker" style={{ textDecoration: 'none' }}>
+              <div style={{
+                background: 'var(--panel)', border: '1px solid var(--border)',
+                borderRadius: '12px', padding: '24px', cursor: 'pointer',
+              }}>
+                <div style={{ fontSize: '1.5rem', marginBottom: '10px' }}>{card.icon}</div>
+                <div style={{
+                  fontFamily: "'Oswald',sans-serif", fontSize: '0.9rem', fontWeight: 600,
+                  letterSpacing: '1px', color: 'var(--cream)', marginBottom: '6px',
+                }}>{card.title}</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text2)', lineHeight: 1.5 }}>{card.desc}</div>
               </div>
-
-              <CardHeader className="relative z-10">
-                <p className="text-[10px] uppercase tracking-widest text-lane-wood font-semibold">
-                  {t.badge}
-                </p>
-                <CardTitle className="text-white">{t.team}</CardTitle>
-                <CardDescription>Season Week 7 standings</CardDescription>
-              </CardHeader>
-
-              <CardContent className="relative z-10 flex items-end justify-between pb-6">
-                <div>
-                  <p className="text-xs text-neutral-500 uppercase tracking-widest">
-                    Raw
-                  </p>
-                  <p className="text-4xl font-extrabold text-white">{t.score}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs text-neutral-500 uppercase tracking-widest">
-                    + Hcp
-                  </p>
-                  <p className="text-4xl font-extrabold text-lane-wood">
-                    {t.hcp}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+            </Link>
           ))}
-        </section>
-      </div>
+        </div>
+      </section>
     </main>
-  )
+  );
 }
