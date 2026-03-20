@@ -1,0 +1,61 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 30 15% 5%;
+    --foreground: 40 30% 92%;
+
+    --card: 30 12% 8%;
+    --card-foreground: 40 30% 92%;
+
+    --popover: 30 12% 8%;
+    --popover-foreground: 40 30% 92%;
+
+    --primary: 43 74% 49%;       /* lane-gold */
+    --primary-foreground: 30 15% 5%;
+
+    --secondary: 30 10% 14%;
+    --secondary-foreground: 40 30% 92%;
+
+    --muted: 30 10% 14%;
+    --muted-foreground: 40 10% 55%;
+
+    --accent: 43 74% 49%;
+    --accent-foreground: 30 15% 5%;
+
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 30 10% 18%;
+    --input: 30 10% 18%;
+    --ring: 43 74% 49%;
+
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+  }
+}
+
+/* Spline loader spinner */
+.loader {
+  width: 40px;
+  height: 40px;
+  border: 3px solid hsl(var(--muted));
+  border-top-color: hsl(var(--primary));
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
