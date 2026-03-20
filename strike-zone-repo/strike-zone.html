@@ -1,0 +1,2916 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Strike Zone — Bowling League Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;600;700&family=Lora:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script type="module" src="https://unpkg.com/@splinetool/viewer@1.9.48/build/spline-viewer.js"></script>
+<style>
+  /* ─── DESIGN TOKENS ─── */
+  :root {
+    /* Background & surfaces */
+    --bg:         #16120d;
+    --panel:      #1e1912;
+    --panel2:     #252018;
+    --panel3:     #2c2820;
+    --border:     #3d3020;
+    --border2:    #554330;
+
+    /* Text */
+    --text:       #e8dfc8;
+    --text2:      #c4b898;
+    --muted:      #7a6a50;
+    --muted2:     #55453a;
+
+    /* Accents */
+    --gold:       #c9a227;
+    --gold-light: #e8c040;
+    --gold-dim:   #7a6018;
+    --amber:      #d4880a;
+    --cream:      #f2e8cc;
+
+    /* Teams */
+    --team-a:     #8b1a1a;
+    --team-a-lt:  #b83030;
+    --team-b:     #1a3a6b;
+    --team-b-lt:  #2e5fa0;
+
+    /* Lane */
+    --lane-maple:     #c8974e;
+    --lane-maple-dk:  #a07030;
+    --lane-gutter:    #4a3010;
+    --lane-dot:       rgba(255,220,140,0.18);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  /* Prevent iOS auto-zoom on input focus (needs font-size ≥ 16px on inputs) */
+  input, select, textarea { font-size: max(16px, 1em); }
+  /* Override back to designed size on larger screens */
+  @media (min-width: 768px) {
+    input, select, textarea { font-size: inherit; }
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ─── HEADER ─── */
+  header {
+    background: linear-gradient(180deg, #0e0b07 0%, #1a1510 100%);
+    border-bottom: 2px solid var(--gold-dim);
+    padding: 0 28px;
+    height: 58px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .logo {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 700;
+    font-size: 1.7rem;
+    letter-spacing: 6px;
+    color: var(--cream);
+    text-transform: uppercase;
+  }
+  .logo em {
+    font-style: normal;
+    color: var(--gold);
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .league-badge {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.62rem;
+    font-weight: 400;
+    letter-spacing: 3px;
+    color: var(--muted);
+    text-transform: uppercase;
+    border-left: 1px solid var(--border2);
+    padding-left: 18px;
+  }
+
+  #clock {
+    font-size: 0.72rem;
+    color: var(--muted);
+    letter-spacing: 1px;
+  }
+
+  .live-indicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.6rem;
+    font-weight: 500;
+    letter-spacing: 3px;
+    color: var(--gold);
+    text-transform: uppercase;
+  }
+  .live-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--gold);
+    animation: blink 2s ease-in-out infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* ─── TEAM SCOREBOARD ─── */
+  .team-board {
+    display: grid;
+    grid-template-columns: 1fr 120px 1fr;
+    background: linear-gradient(180deg, #100e09 0%, #181410 100%);
+    border-bottom: 1px solid var(--border2);
+    padding: 22px 36px;
+    align-items: center;
+    gap: 0;
+  }
+
+  .team-block { display: flex; flex-direction: column; gap: 5px; }
+  .team-block.right { text-align: right; align-items: flex-end; }
+
+  .team-label {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.55rem;
+    font-weight: 500;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+  }
+  .team-a .team-label { color: var(--team-a-lt); }
+  .team-b .team-label { color: var(--team-b-lt); }
+
+  .team-name-input {
+    background: transparent;
+    border: none;
+    outline: none;
+    font-family: 'Oswald', sans-serif;
+    font-size: 1.6rem;
+    font-weight: 600;
+    letter-spacing: 3px;
+    color: var(--cream);
+    width: 220px;
+    text-transform: uppercase;
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.2s;
+    padding-bottom: 2px;
+  }
+  .team-name-input:focus { border-bottom-color: var(--gold-dim); }
+  .team-block.right .team-name-input { text-align: right; }
+
+  .team-score-row {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    margin-top: 2px;
+  }
+  .team-block.right .team-score-row { flex-direction: row-reverse; }
+
+  .score-main {
+    font-family: 'Oswald', sans-serif;
+    font-size: 3rem;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--gold);
+  }
+
+  .score-sidebar { display: flex; flex-direction: column; gap: 1px; }
+  .score-hcp-label {
+    font-size: 0.5rem;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .score-with-hcp {
+    font-family: 'Oswald', sans-serif;
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--text2);
+  }
+
+  /* VS block */
+  .vs-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  .vs-text {
+    font-family: 'Lora', serif;
+    font-style: italic;
+    font-size: 1.1rem;
+    color: var(--muted);
+    letter-spacing: 2px;
+  }
+  .divider-line {
+    width: 1px;
+    height: 32px;
+    background: linear-gradient(180deg, transparent, var(--border2), transparent);
+  }
+  .frame-label {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.52rem;
+    letter-spacing: 3px;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  /* ─── LANE ANIMATION ─── */
+  #lane-container {
+    padding: 14px 28px;
+    background: #0f0d09;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .lane-wrap {
+    position: relative;
+    height: 72px;
+    border-radius: 3px;
+    overflow: hidden;
+    /* Wood grain via repeating gradient */
+    background:
+      repeating-linear-gradient(
+        90deg,
+        rgba(0,0,0,0) 0px,
+        rgba(0,0,0,0) 52px,
+        rgba(0,0,0,0.06) 52px,
+        rgba(0,0,0,0.06) 53px
+      ),
+      linear-gradient(180deg,
+        #b8823a 0%,
+        #c89040 20%,
+        #d4a050 40%,
+        #c89040 60%,
+        #b8823a 80%,
+        #a87030 100%
+      );
+    border: 1px solid #6a4a1a;
+    box-shadow: inset 0 1px 0 rgba(255,230,150,0.15), inset 0 -1px 0 rgba(0,0,0,0.4);
+  }
+
+  /* subtle sheen */
+  .lane-wrap::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg,
+      rgba(255,240,190,0.08) 0%,
+      rgba(255,240,190,0.02) 40%,
+      rgba(0,0,0,0.08) 100%
+    );
+    pointer-events: none;
+  }
+
+  /* Gutters */
+  .lane-gutter-l, .lane-gutter-r {
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 26px;
+    background: linear-gradient(180deg, #3a2008, #4a2a0a);
+    z-index: 1;
+  }
+  .lane-gutter-l { left: 0; border-right: 1px solid #6a3a10; }
+  .lane-gutter-r { right: 0; border-left: 1px solid #6a3a10; }
+
+  /* Foul line */
+  .foul-line {
+    position: absolute;
+    left: 26px; top: 0; bottom: 0;
+    width: 2px;
+    background: rgba(220,40,40,0.5);
+    z-index: 2;
+  }
+
+  /* Direction arrows */
+  .lane-arrows {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    left: 18%;
+    display: flex;
+    gap: 28px;
+    z-index: 2;
+  }
+  .arrow-group { display: flex; flex-direction: column; gap: 3px; align-items: center; }
+  .lane-arrow {
+    width: 0; height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-bottom: 12px solid rgba(255,220,100,0.22);
+  }
+
+  /* Pin deck */
+  .pin-display {
+    position: absolute;
+    right: 44px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 3;
+  }
+  /* Triangular pin layout: columns left (tip/pin1) to right (back row) */
+  .pin-display {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 4px;
+  }
+  .pin-col {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: center;
+    justify-content: center;
+  }
+  .pin {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 38% 32%, #ffffff, #d8d0c0);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.5), 0 0 4px rgba(255,240,200,0.3);
+    transition: all 0.25s ease;
+  }
+  .pin.down {
+    background: radial-gradient(circle at 38% 32%, #4a3a20, #2a1a0a);
+    box-shadow: none;
+    transform: scale(0.5) rotate(45deg);
+    opacity: 0.35;
+  }
+
+  /* Bowling ball — 10% smaller than original */
+  .ball {
+    position: absolute;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 32% 28%, #3a3a3a, #0a0a0a);
+    border: 1px solid #2a2a2a;
+    top: 50%; transform: translateY(-50%);
+    left: -30px;
+    z-index: 4;
+    box-shadow: 2px 2px 6px rgba(0,0,0,0.7);
+  }
+  .ball::before {
+    content: '';
+    position: absolute;
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: #555;
+    top: 4px; left: 5px;
+  }
+  .ball::after {
+    content: '';
+    position: absolute;
+    width: 3px; height: 3px;
+    border-radius: 50%;
+    background: #555;
+    top: 9px; left: 13px;
+  }
+  .ball.rolling {
+    animation: roll-ball 1.5s cubic-bezier(0.12, 0, 0.72, 1) forwards;
+  }
+  @keyframes roll-ball {
+    0%   { left: -30px; opacity: 1; }
+    82%  { left: calc(100% - 88px); opacity: 1; }
+    100% { left: calc(100% - 88px); opacity: 0; }
+  }
+
+  /* Strike flash (kept for strike glow behind particles) */
+  .strike-flash {
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 85% 50%, rgba(255,210,80,0.45), transparent 60%);
+    opacity: 0; pointer-events: none; z-index: 5;
+  }
+  .strike-flash.active { animation: flash 1.1s ease-out forwards; }
+  @keyframes flash { 0%{opacity:1} 60%{opacity:0.6} 100%{opacity:0} }
+
+  /* ─── VINTAGE BOWLER FIGURE ─── */
+  #lane-container { position: relative; }
+  .bowler-figure {
+    position: absolute;
+    left: -4px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+    pointer-events: none;
+    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.9)) sepia(0.25) brightness(0.92);
+    transition: transform 0.15s ease-out;
+  }
+  @keyframes bowler-throw-pulse {
+    0%   { transform: translateY(-50%) scale(1)   rotate(0deg); }
+    18%  { transform: translateY(-52%) scale(1.04) rotate(-2deg); }
+    100% { transform: translateY(-50%) scale(1)   rotate(0deg); }
+  }
+  .bowler-figure.throwing {
+    animation: bowler-throw-pulse 0.55s ease-out;
+  }
+
+  /* ─── IMPACT EFFECTS ─── */
+  @keyframes laneShake {
+    0%,100% { transform: translateX(0); }
+    12%  { transform: translateX(-5px); }
+    24%  { transform: translateX(5px); }
+    36%  { transform: translateX(-4px); }
+    50%  { transform: translateX(4px); }
+    64%  { transform: translateX(-2px); }
+    78%  { transform: translateX(2px); }
+  }
+  .lane-wrap.shaking { animation: laneShake 0.55s ease-out; }
+
+  @keyframes particle-fly {
+    0%   { transform: translate(0,0) scale(1); opacity: 1; }
+    100% { transform: translate(var(--dx),var(--dy)) scale(0.1); opacity: 0; }
+  }
+  .impact-particle {
+    position: absolute;
+    border-radius: 50%;
+    z-index: 9;
+    pointer-events: none;
+    animation: particle-fly var(--dur, 0.5s) ease-out forwards;
+    transform-origin: center;
+  }
+  .impact-strike {
+    background: radial-gradient(circle, #ffe060 30%, #ff8010);
+    box-shadow: 0 0 5px rgba(255,180,0,0.7);
+  }
+  .impact-spare {
+    background: radial-gradient(circle, #a0d8ff 30%, #4090e0);
+    box-shadow: 0 0 4px rgba(80,160,255,0.5);
+  }
+  .impact-hit {
+    background: radial-gradient(circle, #e8d080 30%, #9a7830);
+    box-shadow: 0 0 3px rgba(180,140,40,0.4);
+  }
+
+  /* ─── STREAK BAR ─── */
+  .streak-bar {
+    background: #13110d;
+    border-bottom: 1px solid var(--border);
+    padding: 9px 28px;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    min-height: 38px;
+  }
+  .streak-label {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.52rem;
+    font-weight: 500;
+    letter-spacing: 3px;
+    color: var(--muted);
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .streak-icons {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .streak-x {
+    font-family: 'Oswald', sans-serif;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--gold);
+    line-height: 1;
+    animation: pop-in 0.3s cubic-bezier(0.2, 1.4, 0.5, 1);
+  }
+  @keyframes pop-in { 0%{transform:scale(0)} 100%{transform:scale(1)} }
+  .streak-name {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.58rem;
+    font-weight: 400;
+    letter-spacing: 2px;
+    color: var(--muted);
+    margin-left: 4px;
+  }
+  .streak-title {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 3px;
+    color: var(--gold);
+    text-transform: uppercase;
+    margin-left: 8px;
+  }
+
+  /* ─── GAME CONTROLS ─── */
+  .game-controls {
+    display: flex;
+    gap: 10px;
+    padding: 11px 28px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    align-items: center;
+  }
+  .ctrl-btn {
+    background: var(--panel2);
+    border: 1px solid var(--border2);
+    color: var(--text2);
+    padding: 6px 16px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    transition: all 0.15s;
+  }
+  .ctrl-btn:hover { background: var(--panel3); border-color: var(--gold-dim); color: var(--gold); }
+  .ctrl-btn.danger:hover { border-color: var(--team-a-lt); color: var(--team-a-lt); }
+  .game-status {
+    margin-left: auto;
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.6rem;
+    font-weight: 400;
+    letter-spacing: 2px;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+  .game-status strong { color: var(--text2); font-weight: 600; }
+
+  /* ─── MAIN CONTENT ─── */
+  .main-content {
+    padding: 22px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .section-title {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.55rem;
+    font-weight: 500;
+    letter-spacing: 4px;
+    color: var(--muted);
+    text-transform: uppercase;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 4px;
+  }
+
+  /* ─── BOWLERS GRID ─── */
+  .bowlers-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+    gap: 16px;
+  }
+
+  /* ─── BOWLER CARD ─── */
+  .bowler-card {
+    background: var(--panel);
+    border: 1px solid var(--border2);
+    border-radius: 4px;
+    overflow: hidden;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .bowler-card:hover {
+    border-color: var(--gold-dim);
+    box-shadow: 0 2px 16px rgba(0,0,0,0.4);
+  }
+  .bowler-card.team-a-card { border-top: 3px solid var(--team-a); }
+  .bowler-card.team-b-card { border-top: 3px solid var(--team-b); }
+  @keyframes activeGlow {
+    0%, 100% { box-shadow: 0 0 10px rgba(201,162,39,0.35), 0 0 24px rgba(201,162,39,0.15), 0 2px 16px rgba(0,0,0,0.4); }
+    50%       { box-shadow: 0 0 22px rgba(201,162,39,0.65), 0 0 44px rgba(201,162,39,0.28), 0 2px 16px rgba(0,0,0,0.4); }
+  }
+  .bowler-card.active-card {
+    border-color: var(--gold) !important;
+    animation: activeGlow 2.2s ease-in-out infinite;
+  }
+
+  /* Card header */
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: var(--panel2);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .bowler-name-input {
+    background: transparent;
+    border: none;
+    outline: none;
+    border-bottom: 1px solid transparent;
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 600;
+    letter-spacing: 2px;
+    color: var(--cream);
+    text-transform: uppercase;
+    width: 140px;
+    transition: border-color 0.2s;
+  }
+  .bowler-name-input:focus { border-bottom-color: var(--gold-dim); }
+
+  .card-controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .team-select {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text2);
+    padding: 3px 7px;
+    border-radius: 3px;
+    font-size: 0.58rem;
+    font-family: 'Oswald', sans-serif;
+    letter-spacing: 1px;
+    cursor: pointer;
+    text-transform: uppercase;
+  }
+  /* Roster name picker (Team A bowlers) */
+  .roster-select {
+    background: var(--bg);
+    border: 1px solid var(--border2);
+    color: var(--cream);
+    padding: 4px 8px;
+    border-radius: 3px;
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    min-width: 128px;
+  }
+  .roster-select:focus { outline: none; border-color: var(--gold-dim); }
+  /* Handicap differential badge */
+  .hcp-diff-badge {
+    display: inline-flex;
+    align-items: center;
+    background: rgba(201,162,39,0.1);
+    border: 1px solid var(--gold-dim);
+    color: var(--gold);
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.55rem;
+    font-weight: 600;
+    letter-spacing: 2px;
+    padding: 2px 8px;
+    border-radius: 3px;
+    white-space: nowrap;
+    text-transform: uppercase;
+  }
+  .hcp-diff-badge:empty { display: none; }
+  .team-name-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .team-block.right .team-name-row { flex-direction: row-reverse; }
+  .hcp-label {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.55rem;
+    font-weight: 400;
+    letter-spacing: 2px;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+  .hcp-input {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--gold);
+    width: 46px;
+    padding: 3px 6px;
+    border-radius: 3px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    text-align: center;
+  }
+  .active-toggle {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 3px 9px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.58rem;
+    font-weight: 500;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    transition: all 0.15s;
+  }
+  .active-toggle.on {
+    border-color: var(--gold-dim);
+    color: var(--gold);
+    background: rgba(201,162,39,0.08);
+  }
+  .remove-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted2);
+    width: 22px; height: 22px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 0.75rem;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+  }
+  .remove-btn:hover { border-color: var(--team-a-lt); color: var(--team-a-lt); }
+
+  /* ─── SCORE SHEET ─── */
+  .score-sheet {
+    padding: 10px 14px 8px;
+    overflow-x: auto;
+    /* Paper-like feel for the actual scorecard */
+    background: #1a1610;
+  }
+
+  .score-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 340px;
+  }
+
+  .score-table thead tr {
+    background: #111009;
+  }
+
+  .score-table th {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.55rem;
+    font-weight: 500;
+    letter-spacing: 1px;
+    color: var(--muted);
+    text-align: center;
+    padding: 4px 2px;
+    border: 1px solid var(--border);
+    text-transform: uppercase;
+  }
+  .th-total { color: var(--gold-dim); }
+
+  .frame-cell {
+    border: 1px solid var(--border);
+    text-align: center;
+    position: relative;
+    width: 38px;
+    height: 44px;
+    padding: 0;
+    background: #16130e;
+    vertical-align: top;
+  }
+  .frame-cell.tenth-frame { width: 60px; }
+
+  .cell-rolls {
+    display: flex;
+    justify-content: flex-end;
+    gap: 2px;
+    padding: 2px 3px;
+    height: 20px;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .roll-badge {
+    width: 16px; height: 16px;
+    border-radius: 2px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.65rem;
+    font-weight: 700;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.12s;
+    line-height: 1;
+  }
+  .roll-badge:hover { transform: scale(1.12); }
+
+  /* Classic bowling score notation */
+  .roll-X {
+    background: rgba(201,162,39,0.15);
+    border-color: var(--gold-dim);
+    color: var(--gold);
+  }
+  .roll-spare {
+    background: rgba(200,145,78,0.15);
+    border-color: #6a5020;
+    color: #c89050;
+  }
+  .roll-num {
+    background: var(--panel3);
+    border-color: var(--border);
+    color: var(--text2);
+    font-size: 0.58rem;
+  }
+  .roll-gutter {
+    background: rgba(139,26,26,0.12);
+    border-color: #4a1515;
+    color: #8b3030;
+  }
+
+  .frame-score {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-align: center;
+    padding: 3px 0;
+    color: var(--cream);
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Running total row highlight */
+  .frame-cell.has-score { background: #181510; }
+  .frame-cell.current-frame { background: #1e1a12; border-color: var(--gold-dim); }
+
+  .total-cell {
+    border: 1px solid var(--border2);
+    background: #111009;
+    font-family: 'Oswald', sans-serif;
+    font-weight: 700;
+    font-size: 0.95rem;
+    text-align: center;
+    vertical-align: middle;
+    color: var(--gold);
+    padding: 0 4px;
+  }
+  .hcp-total-cell {
+    border: 1px solid var(--border);
+    background: #111009;
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.7rem;
+    font-weight: 500;
+    text-align: center;
+    vertical-align: middle;
+    color: var(--text2);
+    padding: 0 4px;
+  }
+
+  /* ─── INPUT PANEL ─── */
+  .input-panel {
+    padding: 10px 14px;
+    border-top: 1px solid var(--border);
+    background: var(--panel2);
+  }
+  .input-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .frame-indicator {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.58rem;
+    font-weight: 400;
+    letter-spacing: 1px;
+    color: var(--muted);
+    text-transform: uppercase;
+    white-space: nowrap;
+    padding-right: 6px;
+    border-right: 1px solid var(--border2);
+    margin-right: 2px;
+  }
+  .frame-indicator strong { color: var(--text2); font-weight: 600; }
+
+  .throw-btn {
+    background: var(--panel3);
+    border: 1px solid var(--border2);
+    color: var(--text2);
+    padding: 5px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    transition: all 0.12s;
+    min-width: 30px;
+    text-align: center;
+  }
+  .throw-btn:hover {
+    background: #2e2820;
+    border-color: var(--gold-dim);
+    color: var(--gold);
+  }
+  .throw-btn.strike {
+    border-color: var(--gold-dim);
+    color: var(--gold);
+    background: rgba(201,162,39,0.08);
+  }
+  .throw-btn.spare-btn {
+    border-color: #6a5020;
+    color: #c89050;
+  }
+  .throw-btn.gutter-btn {
+    border-color: #4a1515;
+    color: #8b3030;
+  }
+
+  .clear-frame-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted2);
+    padding: 5px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.62rem;
+    font-weight: 400;
+    letter-spacing: 1px;
+    transition: all 0.12s;
+    margin-left: auto;
+    text-transform: uppercase;
+  }
+  .clear-frame-btn:hover { border-color: var(--team-a); color: var(--team-a-lt); }
+
+  /* ─── ADD BOWLER CARD ─── */
+  .add-bowler-btn {
+    background: var(--panel);
+    border: 1px dashed var(--border2);
+    border-radius: 4px;
+    padding: 24px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: var(--muted);
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    transition: all 0.2s;
+    min-height: 90px;
+  }
+  .add-bowler-btn:hover {
+    border-color: var(--gold-dim);
+    color: var(--gold);
+    background: rgba(201,162,39,0.03);
+  }
+
+
+  /* ─── WEEK SELECTOR ─── */
+  .week-control {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    border: 1px solid var(--border2);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .week-label {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.58rem;
+    font-weight: 500;
+    letter-spacing: 3px;
+    color: var(--muted);
+    text-transform: uppercase;
+    padding: 0 10px;
+    background: var(--panel2);
+    border-right: 1px solid var(--border2);
+    height: 32px;
+    display: flex;
+    align-items: center;
+  }
+  .week-btn {
+    background: var(--panel2);
+    border: none;
+    color: var(--muted);
+    width: 28px;
+    height: 32px;
+    cursor: pointer;
+    font-size: 0.65rem;
+    transition: all 0.12s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .week-btn:hover { background: var(--panel3); color: var(--gold); }
+  .week-num {
+    font-family: 'Oswald', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--cream);
+    padding: 0 10px;
+    width: 52px;
+    text-align: center;
+    background: var(--bg);
+    height: 32px;
+    border: none;
+    border-left: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    outline: none;
+    cursor: text;
+    -moz-appearance: textfield;
+  }
+  .week-num::-webkit-outer-spin-button,
+  .week-num::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .week-num:focus { background: #1a1610; color: var(--gold); }
+  /* ─── SCORING MODE TOGGLE ─── */
+  .mode-toggle {
+    display: flex;
+    border: 1px solid var(--border2);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .mode-btn {
+    background: var(--panel2);
+    border: none;
+    color: var(--muted);
+    padding: 0 14px;
+    height: 32px;
+    cursor: pointer;
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.65rem;
+    font-weight: 500;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .mode-btn + .mode-btn { border-left: 1px solid var(--border2); }
+  .mode-btn.active {
+    background: var(--panel3);
+    color: var(--cream);
+    box-shadow: inset 0 -2px 0 var(--gold-dim);
+  }
+  .mode-btn:not(.active):hover { color: var(--text2); background: var(--panel3); }
+
+  /* ─── END GAME SCORE ENTRY ─── */
+  .endgame-body {
+    padding: 18px 16px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    background: #1a1610;
+    border-top: 1px solid var(--border);
+  }
+  .endgame-score-wrap { display: flex; flex-direction: column; gap: 4px; }
+  .endgame-label {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.52rem;
+    font-weight: 500;
+    letter-spacing: 3px;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+  .endgame-score-input {
+    background: var(--bg);
+    border: 1px solid var(--border2);
+    color: var(--cream);
+    font-family: 'Oswald', sans-serif;
+    font-size: 1.8rem;
+    font-weight: 700;
+    width: 110px;
+    padding: 6px 12px;
+    border-radius: 3px;
+    outline: none;
+    text-align: center;
+    -moz-appearance: textfield;
+  }
+  .endgame-score-input::-webkit-outer-spin-button,
+  .endgame-score-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .endgame-score-input:focus { border-color: var(--gold-dim); color: var(--gold); }
+  .endgame-score-input::placeholder { color: var(--muted2); font-size: 1.2rem; }
+  .endgame-hcp-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding-left: 20px;
+    border-left: 1px solid var(--border2);
+  }
+  .endgame-hcp-val {
+    font-family: 'Oswald', sans-serif;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--text2);
+    line-height: 1;
+  }
+
+  .save-season-btn {
+    background: rgba(201,162,39,0.1);
+    border: 1px solid var(--gold-dim);
+    color: var(--gold);
+    padding: 6px 16px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    transition: all 0.15s;
+  }
+  .save-season-btn:hover { background: rgba(201,162,39,0.2); border-color: var(--gold); color: var(--gold-light); }
+
+  /* ─── SEASON TRACKER ─── */
+  .season-section {
+    padding: 22px 24px 32px;
+    border-top: 1px solid var(--border2);
+    background: var(--bg);
+  }
+  .season-table-wrap { overflow-x: auto; margin-top: 12px; }
+  .season-table {
+    border-collapse: collapse;
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.72rem;
+    min-width: 500px;
+    width: 100%;
+  }
+  .season-table thead tr {
+    background: #0e0c09;
+  }
+  .season-table th {
+    padding: 7px 10px;
+    text-align: center;
+    font-size: 0.55rem;
+    font-weight: 500;
+    letter-spacing: 2px;
+    color: var(--muted);
+    text-transform: uppercase;
+    border: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  .season-table th.col-name { text-align: left; min-width: 90px; }
+  .season-table th.col-stat { color: var(--gold-dim); }
+  .season-table td {
+    padding: 8px 10px;
+    text-align: center;
+    border: 1px solid var(--border);
+    color: var(--text2);
+    background: var(--panel);
+  }
+  .season-table td.td-name {
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.78rem;
+    letter-spacing: 1px;
+    color: var(--cream);
+    background: var(--panel2);
+  }
+  .season-table td.td-score { font-weight: 500; }
+  .season-table td.td-score.high { color: var(--gold); font-weight: 700; }
+  .season-table td.td-avg {
+    font-weight: 700;
+    font-size: 0.8rem;
+    color: var(--gold);
+    background: #111009;
+  }
+  .season-table td.td-high { color: var(--text2); background: #111009; }
+  .season-table td.td-hcp { color: var(--gold); background: #111009; font-size: 0.68rem; }
+  .season-table td.td-empty {
+    color: var(--muted2);
+    font-size: 0.6rem;
+    letter-spacing: 1px;
+  }
+  .season-table tr:hover td { background: #1e1a12; }
+  .season-table tr:hover td.td-name { background: #252018; }
+  .season-table tr:hover td.td-avg,
+  .season-table tr:hover td.td-high,
+  .season-table tr:hover td.td-hcp { background: #181510; }
+  .season-empty {
+    text-align: center;
+    padding: 32px;
+    color: var(--muted2);
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.65rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    border: 1px dashed var(--border);
+    border-radius: 3px;
+    margin-top: 12px;
+  }
+
+  /* ─── STORAGE TOAST ─── */
+  #storage-toast {
+    position: fixed;
+    bottom: 22px;
+    right: 22px;
+    background: var(--panel2);
+    border: 1px solid var(--gold-dim);
+    color: var(--gold);
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.62rem;
+    font-weight: 500;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    padding: 8px 16px;
+    border-radius: 3px;
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 0.25s, transform 0.25s;
+    pointer-events: none;
+    z-index: 500;
+  }
+  #storage-toast.show { opacity: 1; transform: translateY(0); }
+
+  /* ─── SCROLLBAR ─── */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+  /* ═══════════════════════════════════════════
+     RESPONSIVE — mobile-first
+     Default styles = phones (≤479px)
+     480px+  = large phones / landscape
+     768px+  = tablets
+     1024px+ = desktop (original design)
+  ═══════════════════════════════════════════ */
+
+  /* ── MOBILE BASE (default, ≤479px) ── */
+
+  /* Header */
+  header { padding: 0 14px; height: 48px; }
+  .logo { font-size: 1.25rem; letter-spacing: 3px; }
+  .league-badge { display: none; }
+  #clock { display: none; }
+
+  /* Team board */
+  .team-board {
+    padding: 10px 12px;
+    grid-template-columns: 1fr 56px 1fr;
+    gap: 4px;
+  }
+  .team-name-input {
+    font-size: 0.85rem;
+    letter-spacing: 1px;
+    width: 100%;
+    max-width: 130px;
+  }
+  .team-block.right .team-name-input { max-width: 130px; }
+  .score-main { font-size: 1.9rem; }
+  .score-with-hcp { font-size: 0.75rem; }
+  .score-hcp-label { font-size: 0.42rem; }
+  .vs-text { font-size: 0.75rem; }
+  .frame-label { font-size: 0.4rem; letter-spacing: 1px; }
+  .divider-line { height: 18px; }
+  .hcp-diff-badge { font-size: 0.45rem; padding: 2px 5px; letter-spacing: 1px; }
+  .team-name-row { gap: 4px; }
+
+  /* Lane */
+  #lane-container { padding: 8px 12px; }
+  .lane-wrap { height: 56px; }
+
+  /* Streak bar */
+  .streak-bar { padding: 7px 14px; gap: 10px; }
+
+  /* Game controls: wrap to multiple rows */
+  .game-controls {
+    flex-wrap: wrap;
+    padding: 8px 12px;
+    gap: 6px;
+  }
+  .ctrl-btn {
+    font-size: 0.62rem;
+    padding: 0 12px;
+    height: 36px;
+    min-height: 36px;
+  }
+  /* Mode toggle spans full width on mobile, sits on its own row */
+  .mode-toggle { order: 10; width: 100%; }
+  .mode-btn { flex: 1; height: 36px; font-size: 0.6rem; padding: 0 8px; }
+  /* Week + save on their own row */
+  .week-control { order: 11; }
+  .save-season-btn { order: 11; height: 36px; font-size: 0.62rem; padding: 0 12px; }
+  .game-status { order: 2; margin-left: auto; font-size: 0.55rem; }
+  /* Hide the cosmetic dividers in controls on mobile */
+  .game-controls > div[style*="width:1px"] { display: none; }
+
+  /* Main content */
+  .main-content { padding: 10px 10px; gap: 12px; }
+  .bowlers-grid { grid-template-columns: 1fr; gap: 10px; }
+
+  /* Card header: name on top row, controls wrap below */
+  .card-header {
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 9px 12px;
+    align-items: flex-start;
+  }
+  .bowler-name-input {
+    width: 100%;
+    font-size: 0.85rem;
+  }
+  .roster-select {
+    width: 100%;
+    min-width: unset;
+    font-size: 0.78rem;
+  }
+  .card-controls {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .active-toggle {
+    min-height: 34px;
+    padding: 0 10px;
+    font-size: 0.58rem;
+  }
+  .remove-btn { width: 28px; height: 28px; }
+
+  /* Score sheet */
+  .score-sheet { padding: 8px 10px 6px; }
+  .frame-cell { width: 30px; height: 38px; }
+  .frame-cell.tenth-frame { width: 48px; }
+  .roll-badge { width: 14px; height: 14px; font-size: 0.55rem; }
+  .frame-score { font-size: 0.58rem; height: 16px; }
+  .score-table th { font-size: 0.48rem; padding: 3px 1px; }
+  .total-cell { font-size: 0.78rem; }
+  .hcp-total-cell { font-size: 0.6rem; }
+
+  /* Input panel — bigger touch targets */
+  .input-panel { padding: 10px 12px; }
+  .input-row { flex-wrap: wrap; gap: 5px; }
+  .frame-indicator { width: 100%; margin-bottom: 2px; padding-right: 0; border-right: none; }
+  .throw-btn {
+    min-height: 44px;
+    padding: 0 10px;
+    font-size: 0.8rem;
+    flex: 0 0 auto;
+  }
+  .clear-frame-btn { min-height: 44px; padding: 0 12px; font-size: 0.62rem; }
+
+  /* End game entry */
+  .endgame-body { padding: 14px 12px; gap: 14px; }
+  .endgame-score-input { font-size: 1.5rem; width: 90px; }
+  .endgame-hcp-val { font-size: 1.5rem; }
+
+  /* Week control sizing */
+  .week-label { padding: 0 8px; font-size: 0.52rem; height: 36px; }
+  .week-btn { width: 34px; height: 36px; font-size: 0.75rem; }
+  .week-num { height: 36px; font-size: 0.9rem; width: 46px; }
+
+  /* Season section */
+  .season-section { padding: 14px 10px 24px; }
+  .season-table { font-size: 0.65rem; }
+  .season-table th { font-size: 0.48rem; padding: 5px 6px; }
+  .season-table td { padding: 6px 7px; }
+
+  /* ── 480px+ (large phones, landscape) ── */
+  @media (min-width: 480px) {
+    header { padding: 0 20px; height: 52px; }
+    .logo { font-size: 1.5rem; letter-spacing: 4px; }
+
+    .team-board { padding: 14px 18px; grid-template-columns: 1fr 68px 1fr; }
+    .team-name-input { max-width: 170px; font-size: 1.1rem; }
+    .score-main { font-size: 2.2rem; }
+
+    .mode-toggle { width: auto; }
+    .mode-btn { flex: unset; }
+    .game-controls { flex-wrap: wrap; }
+
+    .card-header { flex-wrap: nowrap; align-items: center; }
+    .bowler-name-input { width: 140px; }
+    .roster-select { width: auto; min-width: 128px; }
+    .card-controls { width: auto; flex-wrap: nowrap; }
+
+    .frame-cell { width: 34px; }
+    .frame-cell.tenth-frame { width: 54px; }
+  }
+
+  /* ── 768px+ (tablets) ── */
+  @media (min-width: 768px) {
+    header { padding: 0 28px; height: 58px; }
+    .logo { font-size: 1.7rem; letter-spacing: 6px; }
+    #clock { display: block; }
+
+    .team-board { padding: 18px 28px; grid-template-columns: 1fr 100px 1fr; }
+    .team-name-input { max-width: 200px; font-size: 1.4rem; letter-spacing: 2px; }
+    .score-main { font-size: 2.6rem; }
+    .score-with-hcp { font-size: 0.9rem; }
+
+    .game-controls { flex-wrap: nowrap; padding: 10px 24px; }
+    .game-controls > div[style*="width:1px"] { display: block; }
+    .mode-toggle { order: 0; }
+    .save-season-btn { order: 0; }
+    .week-control { order: 0; }
+    .game-status { order: 0; margin-left: auto; }
+
+    .main-content { padding: 18px 20px; }
+    .bowlers-grid { grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); }
+    .season-section { padding: 18px 20px 28px; }
+  }
+
+  /* ── 1024px+ (desktop — original design) ── */
+  @media (min-width: 1024px) {
+    .league-badge { display: flex; }
+    .team-board { padding: 22px 36px; grid-template-columns: 1fr 120px 1fr; }
+    .team-name-input { max-width: 220px; font-size: 1.6rem; letter-spacing: 3px; }
+    .score-main { font-size: 3rem; }
+    .score-with-hcp { font-size: 1rem; }
+    .vs-text { font-size: 1.1rem; }
+    .frame-label { font-size: 0.52rem; letter-spacing: 3px; }
+    .hcp-diff-badge { font-size: 0.55rem; padding: 2px 8px; letter-spacing: 2px; }
+
+    .main-content { padding: 22px 24px; }
+    .bowlers-grid { grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); }
+    .season-section { padding: 22px 24px 32px; }
+
+    .throw-btn { min-height: 34px; padding: 5px 10px; font-size: 0.72rem; }
+    .clear-frame-btn { min-height: 34px; }
+    .frame-cell { width: 38px; height: 44px; }
+    .frame-cell.tenth-frame { width: 60px; }
+    .roll-badge { width: 16px; height: 16px; font-size: 0.6rem; }
+    .frame-score { font-size: 0.72rem; height: 22px; }
+    .score-table th { font-size: 0.55rem; padding: 4px 2px; }
+    .total-cell { font-size: 0.95rem; }
+    .hcp-total-cell { font-size: 0.7rem; }
+  }
+
+  /* ─── STICKY TOP ─── */
+  #sticky-top {
+    position: sticky;
+    top: 0;
+    z-index: 200;
+    background: var(--bg);
+  }
+
+  /* ─── COLLAPSIBLE CONTROLS SECTION ─── */
+  .controls-section {
+    background: var(--panel);
+    border-bottom: 1px solid var(--border2);
+  }
+  .controls-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .controls-header-label {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.55rem;
+    font-weight: 500;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .controls-wrap {
+    overflow: hidden;
+    transition: max-height 0.35s ease;
+  }
+  .controls-wrap.collapsed { max-height: 0 !important; }
+
+  /* ─── COLLAPSIBLE BOWLER SECTION ─── */
+  .section-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 14px;
+  }
+  .section-header-row .section-title {
+    border: none;
+    margin: 0;
+    padding: 0;
+  }
+  .section-toggle-btn {
+    background: transparent;
+    border: 1px solid var(--border2);
+    color: var(--muted);
+    padding: 4px 12px;
+    border-radius: 3px;
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.58rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .section-toggle-btn:hover { color: var(--gold); border-color: var(--gold-dim); }
+  .bowlers-grid-wrap {
+    overflow: hidden;
+    transition: max-height 0.35s ease;
+  }
+  .bowlers-grid-wrap.collapsed { max-height: 0 !important; }
+  .bowler-footer {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 12px 14px;
+    border-top: 1px solid var(--border2);
+    background: var(--panel);
+  }
+
+  /* ─── LOCK IN BUTTON ─── */
+  .lock-in-btn {
+    background: linear-gradient(135deg, #2a1f08, #3d2e10);
+    border: 1px solid var(--gold-dim);
+    color: var(--gold);
+    padding: 6px 14px;
+    border-radius: 4px;
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.62rem;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.2s, box-shadow 0.2s;
+    white-space: nowrap;
+    min-height: 32px;
+  }
+  .lock-in-btn:hover {
+    background: linear-gradient(135deg, #3d2e10, #55400a);
+    box-shadow: 0 0 10px rgba(201,162,39,0.2);
+  }
+  .lock-in-btn.locked {
+    background: linear-gradient(135deg, #0e2a1a, #1a3d28);
+    border-color: #2a8050;
+    color: #50d090;
+  }
+  #lock-in-wrap { display: none; align-items: center; }
+  #lock-in-wrap.visible { display: flex; }
+
+  /* completion status */
+  .complete-status {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.65rem;
+    font-weight: 500;
+    letter-spacing: 3px;
+    color: var(--gold);
+    text-transform: uppercase;
+  }
+
+  /* ─── HERO SECTION ─── */
+  .hero-section {
+    position: relative;
+    width: 100%;
+    min-height: 420px;
+    background: #0e0b07;
+    border-bottom: 1px solid var(--border2);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 24px;
+  }
+
+  /* spotlight radial glow */
+  .hero-spotlight {
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: radial-gradient(ellipse 70% 60% at 20% 50%,
+      rgba(201,162,39,0.18) 0%,
+      rgba(201,162,39,0.06) 40%,
+      transparent 70%
+    );
+  }
+
+  .hero-card {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    max-width: 900px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    background: rgba(30,25,18,0.85);
+    border: 1px solid rgba(201,162,39,0.22);
+    border-radius: 16px;
+    overflow: hidden;
+    backdrop-filter: blur(6px);
+    box-shadow: 0 0 60px rgba(0,0,0,0.6), inset 0 1px 0 rgba(201,162,39,0.12);
+  }
+
+  .hero-left {
+    flex: 1 1 50%;
+    padding: 40px 36px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .hero-eyebrow {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.6rem;
+    font-weight: 500;
+    letter-spacing: 4px;
+    color: var(--gold);
+    text-transform: uppercase;
+  }
+
+  .hero-headline {
+    font-family: 'Oswald', sans-serif;
+    font-size: clamp(2rem, 4vw, 3rem);
+    font-weight: 700;
+    line-height: 1.05;
+    color: var(--cream);
+    letter-spacing: 2px;
+  }
+
+  .hero-headline em {
+    font-style: italic;
+    color: var(--gold-light);
+  }
+
+  .hero-sub {
+    font-family: 'Lora', serif;
+    font-size: 0.82rem;
+    color: var(--text2);
+    line-height: 1.6;
+    max-width: 300px;
+  }
+
+  .hero-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .hero-stat-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(201,162,39,0.08);
+    border: 1px solid rgba(201,162,39,0.20);
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.7rem;
+    letter-spacing: 1.5px;
+    color: var(--text2);
+  }
+
+  .hero-stat-badge .badge-icon {
+    font-size: 0.9rem;
+  }
+
+  .hero-stat-badge strong {
+    color: var(--gold-light);
+  }
+
+  .hero-right {
+    flex: 0 0 48%;
+    position: relative;
+    height: 320px;
+    overflow: hidden;
+  }
+
+  .hero-right spline-viewer {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  /* vignette on the right side of spline */
+  .hero-right::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      rgba(30,25,18,0.85) 0%,
+      transparent 30%,
+      transparent 70%,
+      rgba(14,11,7,0.6) 100%
+    );
+    pointer-events: none;
+  }
+
+  /* pin dots background pattern */
+  .hero-section::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(circle, rgba(201,162,39,0.07) 1px, transparent 1px);
+    background-size: 32px 32px;
+    z-index: 0;
+  }
+
+  /* responsive: stack on mobile */
+  @media (max-width: 640px) {
+    .hero-section { min-height: 560px; padding: 24px 12px; }
+    .hero-card { flex-direction: column; }
+    .hero-right { flex: 0 0 220px; width: 100%; }
+    .hero-left { padding: 24px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══ HERO SECTION ══ -->
+<section class="hero-section">
+  <div class="hero-spotlight"></div>
+  <div class="hero-card">
+    <div class="hero-left">
+      <span class="hero-eyebrow">Strike Zone · Bowling League</span>
+      <h1 class="hero-headline">Bowl<br><em>Perfect.</em></h1>
+      <p class="hero-sub">Track every frame, every strike, every split. Real-time league scoring built for serious bowlers.</p>
+      <div class="hero-stats">
+        <div class="hero-stat-badge">
+          <span class="badge-icon">🏆</span>
+          <span>Perfect Games <strong id="hero-stat-perfect">—</strong></span>
+        </div>
+        <div class="hero-stat-badge">
+          <span class="badge-icon">⚡</span>
+          <span>Season High <strong id="hero-stat-high">—</strong></span>
+        </div>
+        <div class="hero-stat-badge">
+          <span class="badge-icon">🎯</span>
+          <span>Strike Rate <strong id="hero-stat-strikes">—</strong></span>
+        </div>
+      </div>
+    </div>
+    <div class="hero-right">
+      <spline-viewer url="https://prod.spline.design/kZDDjO5HlFTv7Jng/scene.splinecode"
+        loading="lazy"></spline-viewer>
+    </div>
+  </div>
+</section>
+
+<!-- ══ STICKY TOP WRAPPER ══ -->
+<div id="sticky-top">
+
+<!-- ══ HEADER ══ -->
+<header>
+  <div class="logo">Strike <em>Zone</em></div>
+  <div class="header-right">
+    <div class="league-badge">Bowling League Tracker</div>
+    <div id="clock"></div>
+    <div class="live-indicator"><div class="live-dot"></div>Live</div>
+  </div>
+</header>
+
+<!-- ══ TEAM SCOREBOARD ══ -->
+<div class="team-board">
+  <div class="team-block team-a">
+    <div class="team-label">Team A</div>
+    <div class="team-name-row">
+      <input class="team-name-input" id="team-a-name" value="GUTTER &amp; SONS" maxlength="16" onchange="saveToStorage()" />
+      <span class="hcp-diff-badge" id="hcp-diff-a"></span>
+    </div>
+    <div class="team-score-row">
+      <div class="score-main" id="team-a-hcp-score">0</div>
+      <div class="score-sidebar">
+        <div class="score-hcp-label">+Hcp</div>
+        <div class="score-with-hcp" id="team-a-score">0</div>
+        <div class="score-hcp-label">Raw</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="vs-block">
+    <div class="divider-line"></div>
+    <div class="vs-text">vs</div>
+    <div class="frame-label" id="global-frame">Frame 1</div>
+    <div class="divider-line"></div>
+  </div>
+
+  <div class="team-block right team-b">
+    <div class="team-label" style="text-align:right">Team B</div>
+    <div class="team-name-row">
+      <span class="hcp-diff-badge" id="hcp-diff-b"></span>
+      <input class="team-name-input" id="team-b-name" value="BLUE BOLTS" maxlength="16" style="text-align:right" onchange="saveToStorage()" />
+    </div>
+    <div class="team-score-row">
+      <div class="score-main" id="team-b-hcp-score">0</div>
+      <div class="score-sidebar" style="text-align:right">
+        <div class="score-hcp-label">+Hcp</div>
+        <div class="score-with-hcp" id="team-b-score">0</div>
+        <div class="score-hcp-label">Raw</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ LANE ANIMATION ══ -->
+<div id="lane-container">
+  <div class="lane-wrap" id="lane-track">
+    <div class="lane-gutter-l"></div>
+    <div class="lane-gutter-r"></div>
+    <div class="foul-line"></div>
+    <div class="lane-arrows">
+      <div class="lane-arrow"></div>
+      <div class="lane-arrow"></div>
+      <div class="lane-arrow"></div>
+      <div class="lane-arrow"></div>
+      <div class="lane-arrow"></div>
+    </div>
+    <div class="ball" id="bowling-ball"></div>
+    <div class="pin-display" id="pin-display"></div>
+    <div class="strike-flash" id="strike-flash"></div>
+  </div>
+  <!-- Vintage bowler figure (photo with transparent background) -->
+  <div class="bowler-figure" id="bowler-figure">
+    <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAKEAAADICAYAAACAqoEkAABNE0lEQVR42u29d5xdVbn//1lr7Xb26WX6TCaTnkxCCIQQiswEpIqI4kxUsCFXFOWHevVe71U8M4AVu9cClquIhRmUKi1AZkISkpCQPilTkkzvp5fd1vr9MRMv3oteEfxeIfv9euWPyZzXnH32/pynrfU8C3BxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXF5/UDcW+DyfyG6Pyc80tbUxIQQrjBd/j7ii8dBT/7QUFurrVkQCayYMyfcUFurxeNx+tIX//efXVwX91pcjwCA+nC4xh/1nG47KFgck7ZtCUUiuqZqHsNw8u9sXl86Op3a/t2f/nQsHo/T1tZW7j5Ol1cLBYASwHfV2Qs+e9maFU1rq6sjL/39gkgksGZh1cpSlV303ds/99ALzz0x+s0ffHMeALS1tTH3Frq8aou8LBCIXHza3Dv+aX3j3h98+bPhGXcL+lKLvWDBAnX58royAOFHf3tXd9eBzYOXXXZZCQCIjRsl1z27/M0CPGvJkmjjsvkfe3vjql+97W3nXw0ATU1gJ+O+pqYmNn/+/JpaQKuuLlngi/qWXHz2qncdPbhNHO3e+2hdaV2Zeytfn/wjuDDS1NTEqMXfwXQSNITje3zDzq8DIF1d4ADQ2dkpurq6RCKRSFfX19eGvbEPejUtsG3vgePnrDnrnIYLrzh32fIFH2h65/rzL2p4y+6HHv39NADa2dkp3Ef8j4/0f/nm8Thoayu4ahirw+GwSHI8DtOBEIK0tBDS2gqsrV6rTSq5D3OnOFZSvmBJTXXt9RXllTU5w7CYf0tnPjvdZVvZRQ0XXRhWFM9V+3e/6COEXCSEIK2tre4TdkX4l6mvbyNAM6qWrlhtZHPP//b73z78trddoRBCRENDAwM67UKUXnPd2977dSqTwS1b9s1lqg/nNjaaZ5+9VL7jDjv27NbJ/P7RJ2kkEBRvvqAGEb+28MCBAwoA66XZtss/eEb6f838+Uvqqb80C4A/9NBjewCgtLRUAEA2mxrKFAokFCyfy53i00eO7v9x95EuxTQMMqdu7mDvsNN/5IiTfOTxHWO7d+1O/e7XT0S+/9UfXUAIEW1NbW6S8npJCv6vEEIQQoh4+skNO9t/9rPH77rvN7fG43GptbXVfsn1iZqaZVeVlZWfPjx8+PvDw8O55ac1fiybtc84faF3/KKz5i1PFkuig4Xa0KL5ERrV0vLx/tHxqVy+IRJBtrW1VbjW0BXhn39zQiCEwEDv0RP33f0Tz6e/+rVaSmmBc/5SN/onLnXZsmVKGPaaa99++bXzamuvKwx3+/qnc9ZIyXrZYuXQtSF71dxKyUl0tzZ96N0t8fhGqbV1ne0+atcdvyyccwYApmF0y37vJADn5QxmPB6ny5YtU4QQZGpoqurSM+c+es780EdOX1jtrZ4z11505rnyif6J4qatPfxwj8R29znOQLL6lveu/+yi1tZ1tls7dEX4Z+no6CAAMDiRupf6Sp8HYDqOw2Yt3x+tdGtrK+/q6jIBggtSF/RbRureF/bsG9j23AYyUcxIhjeQPXbowKH3XRLC+YvGswoGU3lqUjUY+1I8HqctLS3uk3ZF+PKsW7fOAUDGxoYfTqZSdMGCBSoA/l8hoyBNTU3sv9w3RDvandvbtn/82785suzFwwPN0xPD2a2PPek7+zR1Xl1wguRzqs/rWxBZNLdCm1MTK2//5aPVhBDuWkNXhH82N4nH46S5uXk6lUj+5pxzGmsJIWJtdbWnAtAJIaK9vf1/uOimpibWNdGVve3XT7Qf6Bm6ZDovftB1cGDfli3HrEIq7Rzq2m8c6SsyTQ8v7OrblQaAlpkExeUfkP/zFZPZVQ2yddvmvoAmlfUPDU1qqjqndtG8p9edff57on6/fmx4aM9Lk5Ouri4BgMQbGqQvPvxM/4sHDh++qL686X1XzKt909IgglKWH+kf7cvnFPKmFef+dsuuJ5OIx90VFNcS/mWLCEBs3rHjSDweJz0TE8dt2348EI6eX11Z/R8LyiNXzb7mpdcrWjs77Y0b49JdH37/wNJ5fhO2Ads0ReOymPrWFayaWiO+nMiePROAwnXHbonmlVNXWnpaeUlkjjk89tyuRCL1suqdrTXe+U/XPH/hOSvWMsYczRMg0XApvXfDrq57n9lz7s6dG9KEEMCtF/5DIv2jXlgcoK3j4/uOjY/v+7OviccpIYR/6qMfrSktl+uT6Qx8Hpn6dL8j8SJdEKWHdu16OgW0s/9e/hEAaYnHWSMANAIdHR1AB1BfWiqa29u5K1iXPwpxNjt+WYu9ceNGCQD27n3xPZPHusTT37/N3vOft4mBB79jTz12t9j8g9v3ACD/vRflr9wA6/avnOqWEABaAY729j/7+8bGRgBAIBBdFK2ugCWEEMKB4zjULOSgUrHk+ivWzSGEnDjZAtDW1saam5sdL1D2r+9rvr48Fl0qqdrx7qM9B471nphfN2/OiS///tF2EGLFL7hAau3sdFdbTmUR/rUUi/kKIUngwgCxAYlQAsdxgh5JXbWgdhGAE0AHnY0fnZ989UvvnV9b+fUgFaXccbDsvPOQTuVwoGMTSktLsLC2+qP/9q0fXdPa2Tkeb2hwhXiKZMev7kMQ4SMgEExDoVgEJYAtOCQAIa8aBoCzz34HI4Q4v/jWlz639ozl91Bql44bGTthWc6Le/fYA6P9GM1OYHfvPnPuoqrzv9f6iQ0fu/SixtbOTnvWfbvu2bWELwsHAMe2awFA8YRIcnAAtbWA6tGFbOVgmmZ5PB6nV1xxi3H/r375KZIbuuOB+39ckJmkRqIRKRStEcePdokNjz1yTBScgj+iLT7znDX2kuUrTjsjnXj2/VN1Nzc3N39/1oq6inEt4cvj9eoOAETKq0EoAREUiqRClmVE/CG5tbWV/+InP7jeK4tvPPfkU4Xdz2+b6Nm7d7q/uw9F2xKK34eSyvL0ifHE5wwTe/pPHJcOvLjH9pdG8ZZ3XP0fX/zgdd8nhEhtfyFJcjnFRcgkyQAAVWHQVRl2Ng07XwShMizLGL3jK3esnVc158fbNvxB9O7bbxF4bDkUZLLuM1KJcVpaXUNWnHHWypKKyPVDo9OPcYfxnG2w6WQG3KPbq9cuvenfmi/+bnN7uyPicVeErgj/BAEAtmGHBBxkUgmihivhhMphyh6ayxdxfGSi8YqLGn891H2UPvPYkxsMxjqnsuZtBw+PX7PvhR2TieF+npiahNcfFGXR0FspyLlEVoQvFCGpfI7kCzZjSsjRGHnfYqCS3HYbj8NdfXFFePLiKRUAwBU5OPDiHvADw/COUtDt0yCdPZQfS2L9TTffcGjnjrqnHn2gzxOM0lSRPJ3MW12lQU/L3OrqStmrk2w2g4JhEM3nK0zkcj+aTiaeigbCiMZKeDqVJD29R2FlU/o5p8//NIRAfVOTaw3dxORPIIJJIvDcfkg/vx8eXUWFJ4SRqUH4Pv8pjGo+/lj7/Xb34a5nZM33uCzLe09MjmQWkYAEVSJTk0lb8WZYWXWd8AWiqqrIy/LJ7PjwYD8UjweSpGNibIgGSsOoAD4Q3NN7e3N7ewJuE5VrCQEQiBkNsN4xpDZuQ21FKWpLK5AzTXjOXAVp3XkiOTVBx8YmjlLFO2471u5Cd//AotKK8z2KPN8s2nZmbAyTQ8NwHEpiFTXw6eplJWWlzY4QKCkro/MXrEBl1QLCmeaUlJeG3756yToAiDc0uGNHTnURnuxeami6yZvZezQgcRt+RUdyYgqypkG65nKMEy540YCiKZhKpp6ymTdRKI8s9OueWxmhZYwLCZYpTQ8fJ71H9iJcXkEqKqvqS2uqPIIyjA0NYGCoD4FoGEJA+INRrDzrrHcAQP3HPuZawVNdhC2zWWqovzcWjJRFQ+VlGDl+jHgiUVinr0Rybg2yYxPE4/WJ+hXL55dGfR+Ekbx4fsT/nYDG6jKp7JF0NpUuWE6ukM2Yif4ekUtPkyXLFwe4ZYhcahLDJ7oxNTUOj9cPr6ZTVfciWlF+3gJAXb9+veOWa05xEdZ3dc3MsDnrzFKaTClTxweFVFVL2Ls+AOn88yACKp57dgPJpQvkAx/5qGfpwvnXBJh4S1BX1sA2dI/XU2La1CgWbKopHhb2qIRkxxGJRmCZBklNT4upyUmuqx5YlgNBBZmYHEc2nYy86fTTA0IINyB0Y8ImAMDipUuk9I4dEKMD0N5yJWxJQ8oaFF1dXXj6nnunHrm/bZfPp4sFC+Z5JYnqhWLumM3tXDGfn7QLhYRfV1l1RQlbs+p0nL14CaRMEo6RB0wbXlkTsqYKQRVwG8gnJ1DIpEjf2JiAawZdER5cdlAAwIF8ImlJwqHlVSS4YjWM7v1Crl+JPR2bslahkOjZu1ts7tiIibHxUR+VahSHR1RHCB0kElWUOSU+XapfsAD1S1agKlqGAAVkbsPDKKkor2CRWIwUs9Ni6Gi3sKam4RRzk6WM5VzpuCJEa2srJ4SgtbbiSNGv9oWWr4Ds9fNCsUBkXSPFYk4q85CSCCuufua3v833HOg64ZHYqqqQtyam0mBYE4Ggl2przlxFz1q9GsFAEI5toDToR4VHxpyoDrkwDWvoGLxmmvhk4SjZorCTxV3tg4OF2SU81yOf6nVC/oVnJdK8zk5+5stPeutXLXQUcOPAHhp8KoiLLrhQ3To9rA10dfeO5aeEqiur5pQFZF0lonxBFauqqWLhkkosXLaGa5pCHUHgCBuxcAjEqsLUxDA0RUK6uwv7hrfmuZWjhMvyxOjkQwBwcHzc9cavEa/vWlfjXHR2dopYOHhk2YrVH7a6+5SB+34O0ttHVjQ1kaTqEeMH92k1i+b5/EFVnlNbKlXW1hLNG8D+Qz350YnJdDRc4g2HItB9CiilkCQVoapahCvmiLJQmBi5fOq5p7c9GFO1M1O29ttvLFp+W7ypi7T+4oTjyscVITo7O4UQgl1+7bumr1535fLKY/0rul/c4ji5NDXLIlhwxVtJWUiVgzFNCfnDrKQ0BlnTxMTItPCUz0+8OFn8z+3PPLM9SIvnEEq5pulE94fhLS0D9wRIKBhFz9HukZ7dfcWS6toucs4F79v0y1+aGzsBd/KhK8L/MoYA+3lnh+hq2J6bQ6Vrx3Y+L7gATR06CugKInUVGB4fxZlXfQCwLJipCRIMxTBvwVJfRcC36vj+F7wnBnpic2tqJRlcdD7xIGn71W8nn3nggZG5QU9k5OCAc3Rw9I5vnhi4tXPXLgsAaXVjQTcxeSk/6OoSBETsHu2dyOuKkGUvdSwCKZFB//fvxv7/vA9nX/0hzD/nAhBFh8QJvKpECqO9wjM5qL/zrW89803nN8pzlyyHb85cCMOwGpuvDVz5rg+Uz69bLC6tXep7c/XpewHg6GWXqW1NTVS41Rk3MXkpbW1tnBCCQxOZUTNkmkGfrk5mkoIoKpFh4tjeA1irBjDUexiDh3YhKgsUs0mAOyRWVSJkrw/qaJFIjCI8dyFZeW6D7PH7MPeC8xT78HEhJ4raBeXRrTcoa85a9MQTx06+r2hqYuRlRpS4nIKWcHbGIfnVr743lhPWcW/ABy6EsCwDWuUCLF/3dlHIZMTEwRehWjlwRqB5dJSUlsEhDhkf7SeFQh6F5BikZBJ18xcgrKtwzAyKW3YRczLL5wYC0c9rJQ/tXHrON/5w2uprUF3tITMbXKm7t9AVIQAItHQwAFZSVx5Qy8pBiM0twrDk7e8CkhmSHRokyZFBSKoGSfUgFA5DVXUUpnNgRYGy6vmIllXByaYhSQq8kRhyRweR3r4XbGKMGsOTojYSXHGmon/qMha+v79k0e6n1jS8m7S28laAC3fi1ykvQrSggwNAr2LfMyWrtofLTCYcW7/3dXNHx2OD44nMNITDbcEFiACRGHyRcngCYcgO4QvmL4Z/0QqYigIS8IMFfCKxax+06TSoooIRldiU8XwsYluOcGqiscUXhSp+fXDd2x+5fc2aOtLaysVLRti5nGLZ8R9LNYjT05/8l4m3VdZdEJycnG8DTt426Yu5/GPs3PMeLffyC9NjJwRkiVimA0gKLAZs3vpcPpdKSV5JIv7SOZCCAeQnRsnIQxtRkhIwBIUai4IEfUSoHmqBU6LrXJiEl8fCSxZSvXlpSfWzZz758PDGhgbpFydOuGfsnYoiBIDGBrCfnzgh9tctQiiVfbvBTbsqViGPGWb2nx8n17/5XP9ajyotyKVTzpFD++iJ40dFIjFGLNjK6PAw0UJ+hCqqhNcxydYnN06TZ/blAoatj06Mi9icaiJCfghKIasq7EyO0IifOqNTdqgkEizX9Kb6YEnnO7Y8O9DW1MTaZ0bXuZxK7hgAGjs7HQKIw2UlTyZVKSsKhsw0lS/SffWfLtlRMpJVb7AREuCEVFVUi5qqOaQiHEOJx+esPfMsmIlJbH7gF6LnxR146vHnvs2yhmnbRYSjUQhZgs0FqKaB50xIIEAiAa5rUoExp9LjjVzmDz/+7dNWL19///2OGyOeoiIkgGhDE/vcb386xr2+TQEBYnDbXuD1BRbLyg8//cVbB8Ynpv6wcPV51OMPOtFwKTSmYW71XKbrOmpjFc7p1bV0z9Gup36/fde9h/ITseOTk1AEB7VsSJSCEAK7aAK5HIRpg3h0SERhJmBXMjV8caTyZ0IINzY8VUUIACUNM5sKEn7t17InAHsqySSV8ejUxNWfq13xnW/84f5PDI3nM4FYpZRKjDvCKKCyqhpz5s6DwS1ypPcY7n9q0+cvV8uEaZrMEYCRyRGeSIHmiuBUQNYYzFwBlHPwZALCLAAMkh3w2ot9kbN+d86ll7mJyikswnWdnQ4AHFpc/Ye0pk7b6TRjlMJrg/vN/PVLqxrJM/fdtz6btu1wZQ3jmp8n00WMTU5ZA8f3kw1bt25r2zP4QkSYS8MOpQooN00D2bEx8GwekBTYiRSoROEkkqC2A25bEOk8LAowysQyh33IldUpmpicZCMapA/ufSj/nsqqBeFM7gxTUbhMJMpTU8yhZPqbe3f91Oju3k9Efq5XZzWJ1Ig9fHy/3HNshEyM2jfvnM4eOXS7532rmdrgU1RBQIljGWDCAQ2HYU8mINkGnHwRUjAEbpogsox8MkXUVIJY3IkmjeRdV+/cWRQz68wup5IlBIAJzJyJN6D7fi5UjRipJPX4AzzsMCk8OkDWrl3r+f3g+IP/cv/WN2/r2LZDJCak8UnreG9CevvdvSMPggBDjnnoqGT3mD4t7w2HhT/oh2QUIU9nwHQNxdFpCFUFinmwdAaUAIHKKmJX1YhwRUXplWXLloqmJtbhtoWemiJsRjsXAL3+32/ePql7d0oFk4DJTkwPoLxor922bVvhPxsaNCFE3soIsefwxIbfvzBy9s92HX1wIyARQGSoUztcNOSjk2P23skTztHkKE/mcsgODsAaGoFpFiB0DRBkJiWiFFYuAyIxx6P7UBH0v420tzsXdnbaoqmJuRseTjERAhAdaKBobnam/L5v6D4/ySamSCAYgEfC6quiUf8HOzuL66srLp8ynH1feeH4Jc+PjY3Hl0FZB9i3yPr76oRz40Ih1VZBC1VaiqQXQUcTk8gkx2FMTcJSODTHgsjmQD0q7GQKhBEIxpg5lRB1qcJN2896a/Nn65aXkfZ2h8wcDERFkzvn8M9UNt6Yn0sA5P+7+Wb5nY9ve8EzMrhCi5U7Y6lR+oxMPji6ZP7AxOjo8XHGUjvWr0+0t7aSZsCJK/5PBx3jphKBUAm0kB8KllbXECoRmHkDAkA2mwIhFBXRMkj+AIRXgZ02oNQvgZ0vwhkbgUcIkEAI42Z++oQqff/L25/8jwdyufGTFxcHaOt/nVzlivCN+sHamppYc3u703b2m8+vO3HiOadoW8HyMunhE93f6l5bv/0nGze1EQAcIGQBlK8OBO8K2tZ1GrfTOpECQUgsxjTUlVXCKObgCKBYKMJ0bDi2jZJYKaJllbASKZDSGEg4AlgGkEzB1hUha14uM8qI4sGAURjPVwb3jtvW5gt+89OvEUKKX/jCF156pK6bHb8Rae/qEqKpiS1/6tETV1cumhtITJ9JmEZUmSqfPrD71vdc9ZEb9x/Zub112TLlJ8ech2tE8RoIYTFBPDplTKYMCqHghgnTtmBYJkAoTMcCJxyO4FAsB2axACUagmRzkGwG9vgILMcistdHTcIE9+k8snyRPxYIza8Nxda9s3rBFU8e2Pn4A52dSSHaWH09aHt7lyvCNyxdXaQDwI+Wn7652rKvN0dG9FhFaXjl9Z9d11dWk37r5keP3ViUfjvXsi82OGwFTFEIoSphYJSCcw6b27D5zN5VIQRs7syIkHNYhSJshSGoeyFyORDOYRoWCpNpyIKDBXyEzamkhkIFdThPpiadkhVzqtddfcmb6+fNObb2in/vbm/vEpQQPBuPS7/4xz72jPy9POcbPkje2NAgrevstDsvXf91z56d/5yWNEt+9z/JXb++69mFmam1HlPoRcd2HAjGycwNkUBBKAElBNS2oXIKWaJglIA7HJzMZHSUE0SCEQRUD7L5HGJlZZgYGUMum0E0VoZASQwIBcBq52LCA1hnVSI6L+p4vBrLpIs4PpzYtL+3/7vXfum7D2L2sJ+NGzdKs6ef/sMIUrS1MbJ+vXNyCporwr9BhI2dnc6vL373leePTTx8eP9ORwsEaJQIUrAcFB2bc25TBwK2AKjjwMNkMCbBUiiYZYGYDmRJAqMEDndAxOxBewKI+sOwCwYcbkP3eTGemoaqqJAoRWmkBLqkYFrVMHblCtS/7Vxkp8ZBBOGq5oGme6ljOTg6OrXvUM/QXdfEv/FrAElCgGefjc+2XjRiYmJCNDc3/z8/ZUoAhFEqOOcA4JkJoWG4IvwbbiQBxEfPf0v4Q+OJXmdsMDyWS4mARxcK58S0bSJmz/i2FQlaXQ3YeBJKrgBLomBCQORykGQZAAERApQLCAiAUBBOIXNAEA6DW+CSBIUxcMuCxmQEZR9eKJPM8AfOU2oqy8BkFbKkQNV0QFYcO58nQa9GpUAJjmfsgQPD0z962w0f/y6A7J88KELw7LPPSh0dHby1tfXvnlm3tbWx9evXO0II/PyLLR9989Vv+/f9W3Z0Xf7hGy8VQlBCyGt2DdIbXYQEEAKgZPMfEs0rGg+Hdd9aXkg5qUJWCjAFFARFy4IkS7DB4TDAf8FqWDv2QJ3KQFI1GB4bpsOhMgWwbAhig8x+fzlxkGcCQnBwSkFAYXPAEQBzbPQ6ycJEdXUmJDKlk5NCBIOlxJEcCFB4ZYllC0kM9I/yaGm1mLdybc28RQu/uOt3P3tv/4nh+3VVdWSv1+wbGnn+hs/d/ty6detsAGCUwn7mGanl7yTIjfG4tK652a7V9fIffOuOn15x1RVXTE9lMZoY//e/xzEap0Th9GRc+FTD2z84Z3DgZyPpaWt8aoKplFBKqGAcRAgHsiJDAwUkBq+iQHEoCAAmS8gW8uAAKKOQiIAkACoIuKCwHBuGY0FwAVVWYQsOLrgIEEr2sOKQcfUS75zqQAhUF7rXT1RFhVf3IeAPAtTB5PgoYiU1KF18ukinp3hmcoR59BhkJsMfiyHPZEyms13HToze81THlke/ds9vD/7R0gtBOjo62GtkIcnOu+6SVt94o/WlT950xdVXvfUHSxtW1vY8t+PEvT9r/0DrL37VIeJx2gKgsbGRNjY2oqWl5VW/76lSvScCwN0fjnvmb3jsRXlqZFEGjj2dSRJFVkjBNhIeUJ8GommyAq+iQQaBRiWAAIwQMFAYtgnTNOFwDg4BSigokxDQdDiOBYVKyDsODMcBCIdsOnxHDN2hq5cv9KqgVJJAKQUjEigRYIyBMYFCxsCiRWegcsVqgALHDuzm2UyS614/dH8UzOulkWgJ9YZKMZ4tOtOZzIvJdPHhDZ3b//CF731v90sESdvb20lTUzMn5BXFj2RjPM7efPvttsM5vnrDte9uXLPq3jXrm+m+PTt3fvSmW9619eBA77GNG7X5F11UnI0RXUv4N7mY1lZ7wxe+fnPlnn3f7Xn6UcMQRIZpUcJoPukU0wpIjAJMIzLRCIEmycJDJUIsB5QQMMZm6hSCwLYtxHxBqKqKvFmE4Vjwaz6osgcpbsFOJ5C1HLxwWmCy9sJ5MZiWLahgFIII4cC2TZhGEcK2AQ7ESmuweOUFiFZUglKGfCYJwywCVAJ3bDhgnEkqD0SiUqCiAlB1jA+Ni/HJxJa+oeEHf/3Ahgfve+KJ3pcIknV0tJCODvwlS0U2xuPswtZWe1ax6g8+9ZFPrlu59MtzyqPYNzh+5PN33n3es0eOTImXZMbxGz+05tyLL71I9evzHmtv+/bXfnLPwZMHWLox4V9gor5eCAhy9/xfH2JlUWDnVqZPTdICZQDneinzKqOiOG4JkxcEUSVOdJVbukyorVGZKYIQYpqwOYckSRCU8IKRQZgI6tf98GseMEWFUTTgy3LHc/GlrHN44MFJX2LHHFrS4g84imXkYNo5hxBACEptTohpcVAqMJ0YQl/XC3CMZaCKAkFlSLIMyyxC9voQ8Hgp55waxbyYHBgUsl/n0VBAKq1efP7yFYvPX3P68tv+9eb3b+ztH7nnX1u+2kEIGX+py25vb6fNzc1/bNY/KZp1M6s2vp9/7iPvnVdTc0v93LrF3C4400Wb/vre9uufOXx4CoDvN3d9601LVp5xeSAWPr8sEFjlLakEjCz2dGzaBuBg46tYijxlRIjZ3HZj6YY3mTGBIxedTVc9fxDqwLAwhIW8XaQRJpdMEXoiw0iagJEwnComqK/IhTCELTTKqCRJwiaUGHCQNgti3CwIkpkifqHAL3vgn1cD7Zr1Qr/+vUDXrkO3XXPVl+PRuY+UBfD+0mDoupJguJzCQDFfgCwVeFokedHMwbQFJqcGqeXkqTcQhsy8IJBBJApZ11FQ/ZA8HlDNQzSdEYVL1Cg44IUph1EhSoMevby6/i2rli19y5pVy6cGRsefGxmffPKFHS8+Rwg5CMBhlOLpW2+V/JUjZPWNrVZt7crQN2689GMlXvX62lh0XuW8ReDeoAOfh8JWcOF1uUve+9nPvCOkqW+rDEcWeFesAkAxdXDn2OEnn3lqy46d7Z/43g8fA0DWvYolyFPCHZ/81n/oXe8q++ztX+7PpovKz352t6UePShX9/aiNG9DFXAKiaRjWUIxhTmagjWmQg2GVa3Sy6gkgVAqAAvcth3OdCaTmB6CSgBBKZzaWugNb4Ln8ksEW7iQTw1Ns+OHd221H2u/oHl2XMjVZ10UvWx1xVV+D2n2S+xsjyLCsgzk82mYhQKY5MB08lxhkpBlnSmKBllWQKgExxFgsgZFD0DRVHh8UXhLyqBoHqiqBseyRLFQ5JrHC384xKRoKSDJmEpmncHxsa2bNj1/9//3b633nrwnN6w7r/6db1l736oFtfWZVB6ZZMqJ1tSRipVrKIlWgOk6wItAchpITGH66BE7ly/ae4Ymnn/yqY4vf/+pZze4MeErrHk1Nzfzxx9/5PzVZ16w6eGHH+OTo2Po6zmUGO85kgjbPBoLB8JyOjtSFgh4FY8WMAuGYfceG5dODPhCtqlLlDLJodRLFRpjGryaCl3zgMytRvGtbwG99DL4aiqQzuUw2T/kBIJ+tvf5bS++72PXndnW1saa0A7S/F+za9569tll584PrYj49RWa7ql1cmaFI4zFYR9ZGdAELDsPSiSbMsqoRAkhFDLTQCChaBYgS14o/hB84Qg0jx+a7gOlEizLglkoCFgW9/iCIlxVLfnnzIUJCfv2Hth6rOfIb+3c5PxyXf5QZdDjS6QKlixRBkKo7o0gVDYHkbp54EQgc7zXSfX2iczQIBUElNYucyouOC+lEKrfc9fP3rF4zsJnsxUV9kvdvCvCP1ewFkIihNj79uz7ihDqv258dpPt03WJESLSiVRqbHwkmU5Oq4pX01KZ9O6SaNmy8orqcimXhtHfa3smk7bHchjyWeaTVBJzKKB5CV1Wh8gll4LVLkJyegqjQ/2oqCxFMBRyIiUR9uC9v37uI//8kYbZY2q5AEhLvIG1tDRyQl42iKetV7358khM/nhZQL6s3K+CUxt5I+VwAUhMpZKkEEIAxwGEM1MwZ7KKgDcM1esHVBWCExQzaQjTgEfzCNUT5FVLTiP+WAmdHutHKjGMTCqJVCrHFSZRicqQVBUUgJHJoHTeQkQW1GNi+ATyeQOl81YgPGeuI+kqQzGLicM9hTs+d/vK7z79dPfsZxOuCP+38owQ+O53v+tffcbZuw8c7Js3MTbOPaqHSlSGx+cBJRTJVKI4OjzgOJZVKIvGwgKCFSxbeD0KYRIguIDgFjyeCILhMMrnz0O0pAoKYQgGZBw9chR9fX1Ye84axKJhp6IqyjY89MSGS66+/JKXW2EQAGlvaqIly8YJ0IiJ+i6xfn27czIJ/eQla9fMqQp8MBbwvnNOWI5xJ4eiaQKUOAATjIIQQolhmIRzDkX2QFI0QpgEmUoghIOBAJIKDoKq2sUQQnFy+bRwYMK0BeOOTSRZARMMqiyBQ0CAIFI1FyUr10Iuq4YQRZBCEVZvHwYOHUmMjQw+8OOf33fPJR+9oaqQz2rXf/Lz90DAAfnblxTJKeKKnW1btlxIFf8zzzy9meuqhwoB5LJ52LYFRVaE1+sjqqbi2IljEI5jxKIRFdzG9MQYfH4PotEoQuEYIrEqlFZWwnIMMBBIigRZkaDIClRNhiwzOI4tgiEvObT3wOQnPnrDsi17905wzv8ai0Hamppo07JlgsyWO5aXlpZdt27BO8oi/ndphK8OeBzd61FhWxYcAgiHg1LAdgQEiKNqPkG5IIIqzLQsUEYgSQp0PQItEIJgEmRFgRAUNuewHRuOaYBBQFYUUCZBZPKIRKoRPuNMwQt5HNm+LffYEx3fnlS0bRe/711V9UuXfWj+4vo1Ox98KH3W299VLoQozq6kCFeEf8EV7969619r6xZ/ue23jziwuSRAQSkD5zbS6QwcziExJhzHwuTUJAcINQwTkWiUXPTmBoTDIQRDURw+2gNNVeD1alBVCcGAHxKTIEkM2WxKpNNpA2BKIKiLyvIytumZjtsvufKSL8zujvmrM8h4PE7r67tI80viyPWr62tW1ernBL3yKpnRekr4HO7wCl2RZMFo2KdI8HpUaF4fKNVF0TAdWxhUkT3E5wsSxeOFIygsy4JEKWRZhu1YcLgFgMFxHDDKIIwiFMdB2VkNIrZ0NTnUtT8rl1Xuq46VL/fqJIBgGAM7d2Ue/s/73nXzD+9+7L777mOvJi48FUo0AgBisZIzsukcmZqcBCMMnAOyrAAEsLlTzGcKkmUVmMerY+HiRSyTLeBY7wnh8/vsefMXSorCwCSCutoKRwCkUMjRfDaLfCYNgApNUwqCCM3r82nBQBi6rtqqJgtFUUOYWeZ6RRd9svArANLS0MBaOjocQsjAfTsxAKDt5OsWRCKBVeXlUjRYrCyJ6AuDur40FnUuCXoKDTUlfglUgWFz5HJZx7Zt4fH6wKgDmDlwQagi69QGQ9HIgxIKCECPliBWVYfYaatAI+X28rDPh2L2XPSfwLED+4pJW2z71YMbP/2NBx/cFY/H6atNTE4FEXIA6Np/tKa79ziS00mqqSocLoRpC+H1emksFpUXLlpIvAGd2DaDrslgMkFpaYwMnhjgGzdugu5VRW11FTELxoBRLNDxyak5XACSIqOysoSUhUpln89HGaMgRCBfLMA2LTI+NDE5u777t8ZLAp2ddishiAO0vqmJlCwbJxP1pWL9+nanZ3o63TM9DQDTAA4AeADAl265aNU5Cysib4kG9Yujfu3MiI8xXRaQiQEiCVjchmUDBZ7jwjYB7lBOZIBbyBRySJzohZKfJKF5K6TevYf4SH/vziMj4w/tONjz+7s7dx2eCXWaWHNz66ueVnsquGNCCBEP3vf7LaHyynMPHjxqSJCUTK5AFE0XVdVVpG5uDUorY5AVhuR0Ct29Q4DNEQ554Qv4wB2Onp4eNK5bC84FRkfGwR2AMgZKmfB4ZC5LEqEgggtHUEYkQDg+n59tfea537/lmkuvea23P/33dfGWOEh9VxM5uGyctLR0OC+NP29Zt3rxkhr/GcGAvoQ45nxVkhTCFDjg9eVhtkzXPMhbsB0BJlNGuGMIVRBiZPnxPFd+tGXnsYdaO58//NJ72tLSQl6rHTynTEz4xEN/+NqS01Z8Op0tFg8ePOZJJNNYunQZyivKoCgUqkahqQy67sF0Oo/jPQMwCiZkVYIsSdi/rwtXXX0RAkEfOBeYmJhCOpmGXTCtbD5TIISyYMgHLgTPZYs+RiSiebxClyX7uWeeOeOGT9xw4NWsr75Smpqa2E3LxslFt22y+Z/fEc1a3nrmdctqg1+oiXjnEabAAmxiWqR7X0/ig490nYk5KzIlhVFrYmLCAGC99Iv9Wl3rG94dn3SDx44dP/Lmyy8lw6PTim1bKIlFkZiehmWbCIWCiEb9CM7Mu0YsrCOwch5Gh6fg83uRy+ZRKFgghCKXywGgiIRD8HuDsAxLVjVJVhQKIWb0lcsUMTI0Ads0eEVtpVy7qPZMAAcaGxv/n4mwvb3daf9jkgOKjgZ6MixtrJ+ZUsHW3++0PLLrF5FI5IFbL55/Q11M+1R5JFiVNyxouif2xL9dv3HFuY1zuOTLkGhkbCiV6Lqv/fffIoRsfi2FeCqIkANAX9/xTclUquD3+zRdU8SRIwdJOBKF7lsAIQRMw4Jl2ZAVATgyPKqK8oow+vqGoCo6Fi2qg6LIUFSGdDoDo1gEdwhMw0EybQOCQ5El6LoORhl8fj9y2bzI5ww4Nqmeffz/J/egtRUc6OStnS9TwpppjU1/8r7pb5656Mx7PnVR8LML59RcrgYqSnWPp87oP0Ai0eqwrrNw1erTltT4wu+YOtK/ilK657Wy7KdEsZoQIoQQZP+u/fsnU4X6LVu28Tk1VVTXvVA1H8KxUnh9CqqrY1A1CaqkABCgTIBzYHgkhb6eQZyxej5UTZ75vRCwbBuUyTAKFgzDgO3Y4A6HYVvIZ00YOcuuKi+XdmzrvPOtTVf8i9goJLKO/CP2GpN4QwNr7ew8eW1kJRBcGoW+cOmShbLiLclkUsXlZ62piCxctnTjMwe/9M1HfzN5snXCtYR/RVjIOaeUUr5r566BlavX1C9dXCdsW0CiFLpHgxACnAs4joBtOZAZByUEjs0hywwjwxPYv68H1TVl8Pp0jAwdQyqVhCIrCAR88HhURGMhBEM+QAD5fBHFTBGECCiqgO7zpgGg4x/4HrV2dtoCIGhronR9u7NXILl3CklsPjz8x1e90PM/M3fXHf/VLpkKITgI3wJuX2oaRUGojNGxMYxOJFFTNx+UBWBbNhiVZpbo6ExLnWlZqKyJwtel4sSJIZx55hJES8IQhGJ4cASZTBblFVE4joVgMQRd12GZJgL+IIJBCtsCkqmZGso/tAxPimqmOP6nGff4OKkvLRUly5YRNDbitW5JPSVEODExIQDgRE/39liklKTTGbpo6WIsXrEcQ4OTsGwbhmHBsjgkicN2HKgSBbcB0xbQvRouvuxNeKD9CTz+2FNQFA2GYeP8N61FbV0NamtK4dGkP7blWpaETLEAyiiRPRq4Y0/MFqxfLwPVBQGAVgig/X8EmK81p4QIm5ubOSEEcsj/4sjg8NTlb3tLpKSiRJwYHiemLSARGZxzZHIFyKofhm1BVhQQQiFLDEQm8HgYOCAcaKS2bglWnLYIlVVBSEwgl8uhaFAwmcGr66AEUFUJjEnUsgxkc9nukw8XLqemCGfjQkYImXr4V/d/1XHMrx083G17PH7JMk0ULQseXUEuV0AopMMwBDRVQGIChmGiaDhIJYuwLUpKSipFIpkGYJPSEu9Md51lA2Sm78QoGLBtB5SAZ1M5MjJ04tjvHv7d0de6tvZG4pQ56oCAcCEE+cEvf/LzifHJiSWLFjICITRNQiaTgWVZKOSLyOdMODbAhQAXAoxQKLKC6akkJibG4PEoxLZNcvTQcaQTRQgIMFkCm+kUBWMEpmFhcHCUa4pGirn8bx999NE8OsBcS3iKixAEoqOjgz3xxBMTAvYvGAGJRoKOx6MglU4ilcrM1PySedi2A9O0QTHjjsEtlJZGsHLlaQgGA/DoHlRVVYJJMkbHpsVUIiMKRQcEMopFG+PjE2Le/Gqm+2FNTY/9hBCClo4Wdx7hKe6OX5qgkL3bd/2qumLOp00qM0oAgpntXP5QGKlsFqGoD4W8AU2TITMGiUqgyMOy8qieUw2vl6G79wg0D0d9/TziOMDo6DTy+RyE4Fi0aCFXNUY3d3bGr/3QtX0n9zS6cnt5TqnB3u3t7UIIQVefc/b4RY0XNixaumiuaQmn/8QQNU0Duu4DB0coFIAkUXg0BYQQUACaJqOqphoDQwPIZzNQJIpUYhqObU4xYk2kUknJskylsqLU9uq6tPOFPY80XnT+xzZu3ChdeeWVrgBdS/gnQiQAnMnJke9Sxhs8Hg2SJGNqagK5bAaa8GJqIoHIgioYhgmiyWAU4DZHNpfD3Lnz4F0sQ9clOLYNAe6nhKiMeRi4JSzDJBPjU2L7ps47Z/t93TjQjQn/lKamJg4Av3vkkQ0jg8Np0zSZrnk4AUEynQRjCoYHRmFbNhzHgRAzzROyIkGSJAwPjmJ0bBqGZSOVyUGRFYU7tq9YyGsTY9N2ZXkFSyTHn/r0rZ/eDIC4btgV4f/MTwgRbW1t7OGHH848+dCDX3WsImJlUVESDSOTmIZh5FEomhgaGQGhEmyHQwgCCgqfV0XAp8PjUZBJ50EIgWEWwCSC8spKLFi2iCWmJ7LPb9r8aSGEO6XfFeH/Yg0JwS/uuuv7FOZUOOajVGYiXyxgdHgIiqLiWN8AKAQcywIBhXAEJAZQicDj0SDJDMGwD36/DwF/AEax6IRCfnqk+/B/3PSJmw50AOzvtInVjQnfKNZwdqdzKhQJHq0ORM/JpXK2EEIaGR6DZQqomoSJ8WlUz6kACAFhFB6PBl1XILiDUMQ7M1GrUIDFGDwejY2PjjkH9x68Z9YKugL8q6tnpyizR8Ly7ds3f3bJ4uVfJEQmxYIpUukcGUvm0dc7imhYQcO6s8EdExIjoIxhcjyFbNZEOOIDY4Bj26CEOLKk0GM93V1nnLXydCGE466OuJbwr7GGjgDIWuDLt950y7PEI/9eD5ZUhCNlvKymls6pLsd0IoHEVBKxiB+UAERwqLKEjDAgwEEpgaKpSCTT8KuM9Hcf/Q8AdkdHhwTAPaPEtYR/tUWUCCH2PT/5zx/5wiU3btr8vE1tSCWVc7G4fjlWnjYf5WUBSIxBgKOY55hKZKD7FMgSg+Nwx6MorLfryK5Va08/5yVW0LWEfyWn/CmUjY2NdO7cuVi5dJn3jLVr3xmMVsG2BBkfH0UkEkZt7VxoGiBLMhxnZvOrJDNQipk+XRBkEgnSfu+v3r1xS+ex+vp62t7e7saDbnb81zMxMSFaW1t5xkhPmJYBTVNRV1cHn9eLXDqL/mP9kJmCmVyDglAB2zJAQUAJuMIk0n/sxJ5bv9q6RQhB3bqgK8K/pVxDAGDO3HnvqKkqh8wo7znaA9u0kE5O4dD+/SgWTXDuQAgBShkokeDYgGVxns/kyfDA4K8IIU5HRwd1JeUmJn8LDgASi5WuFUJgeHCYpjNpqKoKwR1MT0+iv38YC5fMg2EZUCQJlBHYti1kprLuo13T97fdfy/nnMz+LRfXEr6ipIQQQsR73vOekK576gQIOAeRJAmqqoLSmePFDncdBgRgOzYsxz7ZGMVtwyBHDh/5Yvtj7aMdHR3MLcu4IvybqwNvf/tbl3q93nAqmxNccEIp/eOwJN3jweCxExgbGgEBgWU74FwIQhg70d+f/93v2u7DzKwZNxlxRfjKOXjwoCSEoEsWLj4XjCGRSDo+XZ05v45RUCZDlhSYNsfBg0dBqAxhOXAccEVRkU1M7fjDs38YFgD5fzVZwRXhG8wVL1++3CSE8HC0tClfsKCqGgkE/KCUwufzwePRAcKg6V70HO1DJpUDmAzOIWBYGOo7fj8A4SYkrghfsQsmhIAQIm677csrn9+yvaWsvHzN+Pi0kJjKxicmwRhFrCSGWGkpJFmBx+NDsVBET28vZEXhfq+HDQ8Pnvjp/ff8lFJ6sg/Xxc2OX1EyQjdt6rhvbu3ia0pKQsgbplA1jfT3D8IfCCIaC4MyCZFYAPlcDoVsHrKq4ejho1hev4xH/Lq0e8cLP+3s7Cy+0gmsLqe4JRSijVFK+W9+88tz3/SmhmvGJ1L8aO+go6gKsU0blmlj0aL5kJgCVfHA7w/Co+twhAOv14dcIsMT00mpb7C/71O3furbQgjiWkFXhK+QJiKEwBmrzvg8AJ4zLL51y0E2PjqF3mN9iMVK0D8wgGQyBUoJPB4VZeXlUDUdhEqQJEX0H+sHuOiamprKzGbXblnGFeFfx8aNGyVCiP3AA7+7adHipZdMTqdFeVm5ZJkODnf1QqIKhgaGcOjAYZimgWwuA0c4kBQVdfMXoKKyHJKmktHRcWQTmSrgj33E7g5qNyb832lra2ONjY3Od+68c9m55zV8KZ21nX27jtJEJolwRINlGvDpXhw8cAipdBqKosI0DBTyRYyMjCHg82JJ/RKks2mSSmQwMjxWF7/lFj8hJDkbY7pKckX4lxMRAJwQIh68/7Ff5bIi+PzWLU7/sX5iWRbABBJjAnXz5iGdSUFiEjTNAyIoxofHMTE+AUWSQZiMmjlzkZ4+gEw2p9afcV4A+E6ypaXFdcmuCP9XARJCCB576MmfFw2c/tCDDzmMEMYIhaIx2NxCMV+AaRoQgs+M/BUOLNtAMpWEZRahKBIsw0IoHCKRshKeS055Tgz0VADo7+rqcs2gGxP+WQgASggRL76499cV1TXvGx0dsf26zLwqhcI4uF2EY5uglKG8shL+gB9c2CgWC8hkMsjlsvDqXng8GkzbgCBASUUFr66tQ0lpxaUAcNNNN7kidEX4ZxMRRghxdu/e/Z+xWNn6F3bstmSFSpQQGAUTk8kMxtN5TCYKyBkOomWlCIaDcLgDbjvIZbMgINA9HoAAnABUkiDLjISiUcxdtOjNANDY2OiWaFwRvnwmvG7dOnvTs89+rrpq3vuf2rDZMm3IpilhdMpA/1gKI+NTSCbT4BxQNQUyEwB3QMFmNq7aJigVIETAtjkkpoAyAk1jlMkEFbXVp//H175WTggR8XjcXbZzY8I/zYTXrVtn3/2Duy+Mlsy745E/dNqTE1lJkiQoioTS8nIEAj4Y2Qx0jwxhmYiVRlEo5JFKJKDKMhzbBoQAYxJAKAQAxzJBBIUqqYSpMq+pjPiXr1mzAsBofX2965JdEc4Qj8dpU1MTGhoafHNql/y07/i4kCijdXWVRPeqkBmBlc8jZQNZXYIFB4QSzJlXB4tzGPkCJBAIcIBQQBAIIWAYRRRyBUiyBEoJfH4f9+kS9aieswFsOLk72+UUF2FbWxtramoShBDngfaHfrR42dK56UzamVPtZ0NDI5icGEU+nwe3rZmp4EwBIQyGWYDtEChMhQmgWMgjENBBhAzbtkFnxmuikDfARQE+vwYyO+IjWhI9e/bt3W1cp7oIZ6cpOACwpXPLxyqr5lw7PNTvDPQPstR0CoTMHHpIQEFkFaYjYJsOqJGDwnOYHu1DuPQsXNCwDi9s2w4hbJSXlmNiMgFZZiCMwrINyJIMRdYgBIhhcqgez8rLLrtMJYQYcJfwTlkREiEECCH8+eefv0pTff82PZ5c+/TTnbxQNJiqapAUBVxw2JYD2wYMi8MyDXh4EgHVhleVkRw9jl3pLJcknQZ9OpLJJBRZhqIoEEJACAFJUaDqGphMAcJpsWAJr8db9Y53vGPBE088cVDEBSGt7vb+Uy07PilAcfDgwe8GArGH9uzpXrvvYDc3LZsqijpzXJhlwTRMFApFZLMF2EYWYZJEmZ/C41GRNzlkJYCFixbTRGoKqYkBqDDgFAtQmATTNKAqCnw+H4LBAIJhH1RNBmPECYeDtK6ubjUAdDS6G1tPNRGSWRdMtj+/8x4I9eYNT26ypyamHFmSKHcAo2jCMEwU8iYSyTzSuSIoTSOmZBAJMnBGkSlyePwlQlCC6bGx7sqKOSCqLsBVJJNToNSAUciBO/bMP9sGIxSapoLQmTAwFiu9YLZe6KrpVHLHs4Vo++GHn/hqKm2+d/O2DtO2HUU4DvJFDkoYbMuGaRRhco7yijIEFRsin4euepAvCBRtB/5gqRULl8jPb9/y8Zolnv0hzdcpccohK8y0ixBFDkIcFAoFyJqGfL6AfL6AyqootIhOAcDv962avSy3aP038robAyKEYHV1dc69P7/38vMbzvuB6vVZFZVVsqKqxHYcmIYFx7ah6SoWL1uAxsZzEJYtFKdHIFMPkjkDlkMQjFRY1WUx+VDX7m/88x23ffG2O26v5w6uHRsaFUSiFJRAIgLggKAKAuEwFElBIpFEKplGNBKBpErE4U6oJhr95TlvelMqHo/Tzs5ONy58I7vj2ZUJ8eEPvzt28eUX/xhE5X29AyyVzJGKijlYvuI0XHJpI979nqtx/UeuxVvfdiFSI8cwcPQwbEdgMp2E4wiEwmG7prxc7uvtvvejn//8p0U8Trdt2zIciESFv7yCOiCgsjLzLaUChWwCxVwesiQhFAwgOZ3CQP84MQzHiUQinsqauY2zLtmNC9/o7rixpYUSQuwDB7q+bzhS1YO/f8JRVInNmzcPfr+GWCyGkogfAJDN5bDhwceQGJ0Ah0A6nQFjCvzBkF1dUS31He995H2fvOW9QghGCHE+85nP9IYDZROObZZKispBBAWVwR0LQhSRTE6htLwEfr8PvoAf/f1DiJUERE1VBFW1tecCuMeNC9/gIpwVi73hyQ3vL6uY27xj1z57zdpVks+nIxwOIhDwwKtRGJaN0eFxHNyxA7nUNBzHRDqdBWMKPLrfqSyrlAaHh56/7uMfbhJC0JaWFjG7MTXzUPv5gwAvpRCCAiBMArcNUGIjl8nAMAwEQ0FES0tw+NBB9PUepzVVEZSWlZ3pxoVvcHc864b5nbd/rnbBsiXfmsqkeX39IlY3twLlZWFEYxq8GkUiYWD79n3YuXkzCskECrkscrkcGGWQNM2pKCtn+WKhp/3BtncQQoyWlhbMNq1TACiJlvR6VQ8kxgRjFIJzUCaB2xaomcP4yAgggJKSCObW1mJ4eIIksgZ8ft+C695+XenJw71dWb0BRdjS0gJCiGi89Mq7QuFwmFGIoN9LvB4Ffr8GCoJjA+PY1Lkdw0eOwjFySOdSKBp5cAHIqkeUh0sod+z8C7t3v7P9scdG77vvPvbfpyYEw+GCRCj4rPgolcCYF7ZDAdtAOjGG6akJKIqM6ppqlJSWkZHRSe4PBkLrLrt4KQC0t7e7ceEbzR2fbFB64okn1i9fuerSdLZgl0VDEiMcmqbAsjn2HTiG7iN9KE4NQCE2srnszL5AziEpiggGQo4sK2Tvgf0f/MJX79gbj8el5ubm/9ErLHlkr+bzwkmmQQWDIIAAgaT6kClMwVeU0He0G5quIRAIoqyiDKqqcK+m0jnzqtcRQjrdzQxvQBGePKjao3nfqSmqED6ACgFV1ZArOOjs2I6eo93wEwvESiNn26AACAGooiIciDgBvy519R79p8/c8YW2u+66S77xxhutl3uvZCojqMQAIjBz+gOZmUvIGKjihZHLgbJp9HV3Y+HiJSCUgHNOAaCyrPwKIUSLGxe+Qd2xEIIwSVI550SRJKKqGo52D+Hee36PF1/YBcXJw8pPI5vPw7EdAARUkkU0FLLCAZ909MjR22/5t3/9ycaNG6WXE2BHRwcBgERiaptlO+BwQMEBbkKIme1eHj0AwhTkktNIjY1g6PhxcBBIkkTzlsMra6rP/MZXvrKWUira2tqYK603VnYsCCHi8OEuhVKKTLaITc9twZ6dB0Gpg9rqCuSmhpApJKEoHoBSOCBONBBENBCSDx05cufHbv3cFzbG//y4jpNj3U6c6H3Kw/y2JGtMEAWCchBugnALlEjw+rwoZGxkpkZh5QsoFi0sOn0FLMsRoVCAnXt+w78LIa5qampylfVGEWE8HqeEEH7zzTdXR8OlZ/cdGxZPPPY0TUxPw6NpfF7dIqJ5PKSQTQFGEZRReD2qU1pSwizTxov79t3x6Ttuu3VjPC6ta/3z4zpaW1s5IQQ33nhj15MPPt6dyRlLCwbnkuajEAK2VYBtGnCEAX/IB6MgIz09jqGjaRBRhOfsM5mmBsW8hfMv/2L8i0sAHJld23b3Gb7eRdjY2EhbW1v56cuXXd/XNxDq6NxqU0Iln9eL5fWn0WAwgunUNKpqF0FRl6GYGhJSNsOmpye3HD3e9++t3/jOplkx/K8DizjnhBBC8rlCzjIMGAUTkuoBlWWoug+a1w/TyKFQzACg8EdiQtgmGe49AtuxsOq8s52ashLpnPPX3EII+ejGjRsZ3M2ur/+Y8GRS4teU1enkpBDcRDDgRSIx7Tz0yCPPTE5NT/m9fiiaJmKlZXYoEOEHero/ee3Nt5zf+o3vbGpra/urz5fr6OhgAOyCXXgxVlYCKjEuIGCZBYwMD2J48ASExeH3xaDpfiiql1BJgxDAwKFD2NXxPEulDVG/8rT3fPYTn5h34YUX2m4D1BsjMREAkEulo9FwkMytrYZXV3guOz4m0Yncnl1PjO14rsNwCgVeESmTTpwY/vW/fOUr3xZCsKampld02vpJwUei5QFQBps78OheRCKl8Oh+ZPOm03XwoP1cxzO57Vu3DuzdvXvgxPGB4sT0FKZSEziwexvZvmkHLy0pDVx65Vu/JoRAS0uLq7DXuztub24nANB9qPeuyrmLz62pm0uH+gfJJZdfHZhbV3mVx8OQmk7zTRs3pYaG+v4wMDH5L/F4XGppaeF/w4E2HAB6uw+V1pTXQJUY4baDolOELGmYt2AxE1wgnUrRolGslBXFkRmTioUkCvkUjFxabNu6AfMWzsPKVWuuuelDH1pACOmJx+PUHSX8OraE7WiHEIJkYPTokSA8Xh2qR00xSZYy2aIYG0s6lbW14s0Xnxd+4qEf/6G19V9GTyYar7QERAgR1113Xalw5LNSyQQsq0iFcGAYRRSNIrhjgQsOjz9AQ7EY8wUDijcYotGSSkRK5ji1C1aSWDjMnnzkgX37X9xzmycUGpkVoLu16/VsCZuamhghxPnNr355+VlrVmPHCzt5wcgFKiqixKerZPNzu7nuVVlqeDRTv+D0He1PbaUtLS2v2Oo0NzdTAE5IDc0VRPUPpQqCCod4rQwsx4Hm8YBSCgECcAFKGBhjAgLcASWl0RJmmwUnT9Q7Pv6Zj30RgOVK6w0gwtkpCubHb7ihrqGx8aOOw0V1ZQWrX7aU+L0+dHf34Jzzz6aL5lfTux574OutP/xhX2Nzs9Ta2vqKR/cuW7ZMAEB9bU2iet4ch/rCzCrmxdTEGOGZFLy6BggOxiQQQQRjVCiaRhVZYVYhjczESOeR/fv//Ys//NpWSikcx2Enu/9c/nf+Idc529raWHNzs/OZz39m8c3/9JGHyitrF49NTfBwIEA5F8hnsxgfG+dLly8lu57fNLr2/IuWCiHSs3MCxd94H0T8/e/Xas+/9Ehl9bw5BJxnMilaLBRAAEEoA2Uy8Wg6FFlGOjE1ZmRST6Wnx3/98Vv/+QkAeOw731E9p53mTExMiFkLy+G2gb7+LOHJHuKHH/7dWaetPP1xbyAcHRsf5WVlZTSfzyORSsExTASCAS4RJu3c+kIbgNSrPGNYtLUJ1txMit+qP/MZj0f/YD6b4bJEQSgjkqwSxiQYRtGcSk72TQ4MdKhe9ovB1NGDd379Z5mTf+SKW24xXEm9zkV4cvv+t374rbn19SufLC2pDO/dv8dZvHgRGxkeBgTg9/uR4xlUVJSzowf3OU8+/OjPALzqE5VKSmbWj70a7dEVAUcm0L1e6jhAKp0bFTyVHhrumV6ycJFVU1N25kjPkehCVqn/+JOfsQ3dE4rU1j3GnXxPTaRGnkgl88GIMrq5Y8uR1u99Lw23Mf71I8LGxkZKCLH/8NAjHwuGwuFDhw5ZAb9fBoCpySmMDA0jVlqCZUvrHVlWWNeB/Tsf2bx532uxRHbSheYTU92mHoRZMMR0Ovfi4e7Dj1955WX1/oD3Qn9EWlhZUkOCXj93iDMUC4a80ZCvsZAzcNqacxp6Du0DyzmI+IIYnxhH0bLOALA7Ho8TN0t+fYiQXHjhhXZTUxMjgl/Zd+yYkKjEbMPGxPgUyisqEQqFwBiDR/fCtkz09R3/KQDMnqj0qkR4srD9iXi8/fvxr618/khX2b2//bn5ox/f/aHK6tKrGZER9J+GwwcOWPlgkC5eVn/1yMDgThYp+bFEktU7XnyBUIeXFBMJLhOqjY5N7vzqj360R8TjlLh1wtcHJ5e4PnLt9Yv/8PBD5uBAv9jy3BZx36/uE9uff0EcO3ZcHDlyRIyNjTlCCH6s++iJxYsX+0+OBP57JGvXX/9P79qyebNzYqDfmZ6etpLJpJ3P58Xho0edkdFRa/PGjl4A0ddLwvePCv1Hu5ZgxLvEq3vl4YEhZ3x0BIVcFl3798O0LAQCAWiaxgGQ3u6e+48cOZLBfx3l8FolRvhwU1PwS1/4zLXXrn/bnbrHQyUmEcaYlM1kmO3YqKysoKlMmq4579x52zo7N5y7eLH/TxQ402virhu/XrNjCshGMYdiIQ+/rsGnKsjmiqBCIOgPCFlV6NjIUL5j48YfCSHI31Kc/ku1SUKI/ZVbPx2/9KILP2kKBZl0QkiKRCA4VE3D+MQEAoEAwv4g7e3r5fVnnL7qtm9+86nh8fGeUCiM8tLyvR/9/97+A0JI/uRKjCuz14kIu7q6BACMTgwPGIUCZFmihMighMLIZzHYdwxVVVWOJEnSrue3f/+OO+/svv1rX2Otra2veVHY6w1HQZiwTNMClZTpqSkQyhAKh5HOZCAzCaWxEng0lRaKBb7yrDPXnibI2mAoBEVRrnv4gW3vefypDVe2tLSMnhza5ErtdeCO29vbHUIItu87tDudTvUL2xFW0eCOZUOiBImxca4oinRw/97M9771rTtP9gy/xtm5A4BqslxfMIrEMk0muAMqEXh1D/LZDCrLy6DrXticg0kyfB4fzeaygsnUAYHDwYuVNXNWnXfeubfMrmG7W/1fRzEh7rvvPtbV1WUeH+j9iaRYNJ9J2PlsgiemxxyvrvPJsVF7246d1z2xefNEe3v7a33QNSGEiEgk4tP8eq1pmbCKBiWEoLy8DBXlZaipqUE4HAYApJJpDA4MYM/unUin0oRJjBEiWDqRUI4dPWQPH9l/1ZUNDTHMND65icrrJSZsbm7mIh6npKX1q9/5yq2r51WVXZXLTMHMTUFiC9D57LMfuuGGGx7eGI9L616mZfPVJiSEEJxVX+8lwtEcy4Zj2wiHwygvrwRhDMIRyGcy2Pn8FqiaAq9PR9Dvh0f3oa/rMHoP7+fjQ/3cSx1pZGx0yej0aJQQMhkHaKtbrP6z/MO5itbOThBCnMef7rxvyYJaTCcmS0HpdJHTW9/34Y/+eOPGjdK6D37w73G+MO3s7BTVgUD1gnm1n6KSBMeyMWf+QqIFw0gmE+g/fgzpZGL26FkVMiOimMmI1OgxfmjXMyI10sd8MqUTidRg9+Dw5x/duP2xeDxOWzs73Trh6yk7njFKM1ll/M4ftgBonXVnfPb//y4HXJ88Hqxq3pwKJnG7aGRFcirBSgdrYVNCpsbGhCQx4fXporKiRAyf6CWF0RFWzE4R20hBFQ7SHH37jvTc/Y17HvkxgGkBELdQ/foU4R+F2NbWRtfPrGSI+2b6Rf5u26OWjY8TAJCYmA8CKZNKAgQ42n0AAHckyljA5yeikMJAVzemRgeQGB3leaPYnyoYW4dHk/ff9cCGpwDkgNm9kO3t7nauvyYYfx1d4987pqIA+Fsazlm+ZMn8z2ey2bnTU4mhj998y4XBYCh0vK+H53LJwZETx4fzE9MHU8Xi1p6R4W0PP7ujD0Dx5B+Jxxuk1tZOB24M+IYS4f8p3/v61xf5/J6FXbv399z5ox/1Ayj899e0tTUxtAPNM30trvhcXv0Xs62tjQkhyH8f80YIgRCCxONxKR5vkGbXu90vsmsJ/77E43FaX19PDh48KGa3Y7mWzsXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXlNeb/B2S0LmaDxNVOAAAAAElFTkSuQmCC"
+         alt="Bowler"
+         style="height:96px;width:auto;display:block;mix-blend-mode:screen;" />
+  </div>
+</div>
+
+<!-- ══ STREAK BAR ══ -->
+<div class="streak-bar">
+  <span class="streak-label">Hot Streak</span>
+  <div class="streak-icons" id="streak-icons">
+    <span style="color:var(--muted2);font-size:0.62rem;font-family:'Oswald',sans-serif;letter-spacing:2px">— None —</span>
+  </div>
+  <span class="streak-label" id="streak-label-text"></span>
+</div>
+</div>
+
+<!-- ══ GAME CONTROLS ══ -->
+<div class="controls-section">
+  <div class="controls-header-row">
+    <span class="controls-header-label">Game Setup</span>
+    <button class="section-toggle-btn" id="controls-section-toggle" onclick="toggleControlsSection()">▲ Hide</button>
+  </div>
+  <div class="controls-wrap" id="controls-wrap">
+    <div class="game-controls">
+      <div class="mode-toggle">
+        <button class="mode-btn active" id="mode-btn-frame" onclick="setScoringMode('frame')">Frame by Frame</button>
+        <button class="mode-btn" id="mode-btn-endgame" onclick="setScoringMode('endgame')">End Game</button>
+      </div>
+      <div style="width:1px;height:22px;background:var(--border2);margin:0 4px;"></div>
+      <div class="week-control">
+        <span class="week-label">Week</span>
+        <button class="week-btn" onclick="changeWeek(-1)">◀</button>
+        <input type="number" class="week-num" id="current-week-display" value="1" min="1" max="40"
+          onchange="setWeek(+this.value)" />
+        <button class="week-btn" onclick="changeWeek(1)">▶</button>
+      </div>
+      <button class="save-season-btn" onclick="saveGameToSeason()">✓ Save to Season</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MAIN CONTENT ══ -->
+<div class="main-content">
+  <div class="section-header-row">
+    <div class="section-title">Bowler Scorecards</div>
+    <button class="section-toggle-btn" id="bowler-section-toggle" onclick="toggleBowlerSection()">▲ Hide</button>
+  </div>
+  <div class="bowlers-grid-wrap" id="bowlers-grid-wrap">
+    <div class="bowlers-grid" id="bowlers-grid"></div>
+    <div class="bowler-footer">
+      <button class="ctrl-btn" onclick="addBowler()">+ Add Bowler</button>
+      <button class="ctrl-btn danger" onclick="resetGame()">↺ Reset Game</button>
+      <div id="lock-in-wrap">
+        <button class="lock-in-btn" id="lock-in-btn" onclick="lockGame()">🔒 Lock In Order</button>
+      </div>
+      <div class="game-status">Bowlers: <strong id="bowler-count">0</strong> / 6</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SEASON TRACKER ══ -->
+<div class="season-section">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:10px;border-bottom:1px solid var(--border);margin-bottom:4px;">
+    <div class="section-title" style="border:none;margin:0;padding:0;">Season Tracker — Gutter &amp; Sons</div>
+    <button class="ctrl-btn danger" onclick="clearSeasonData()" style="font-size:0.58rem;padding:4px 12px;">✕ Clear Season</button>
+  </div>
+  <div id="season-tracker"></div>
+</div>
+
+<div id="storage-toast"></div>
+
+
+<script>
+// ─────────────────────────────────────────────
+//  STATE
+// ─────────────────────────────────────────────
+const MAX_BOWLERS = 6;
+let bowlers = [];
+let nextId = 1;
+
+// Team A roster — drives the player name dropdown
+const TEAM_A_ROSTER = ['GJ', 'BLAKE', 'STEVE', 'TOM', 'LOGAN', 'NOEL'];
+
+// ─────────────────────────────────────────────
+//  LOCAL STORAGE
+// ─────────────────────────────────────────────
+const STORAGE_KEY = 'strikeZone_v1';
+
+function saveToStorage() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      seasonData,
+      currentWeek,
+      teamAName: document.getElementById('team-a-name')?.value,
+      teamBName: document.getElementById('team-b-name')?.value,
+    }));
+    showToast('Saved');
+  } catch(e) {
+    console.warn('localStorage save failed:', e);
+  }
+}
+
+function loadFromStorage() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    if (data.seasonData) Object.assign(seasonData, data.seasonData);
+    if (data.currentWeek) {
+      currentWeek = data.currentWeek;
+      document.getElementById('current-week-display').value = currentWeek;
+    }
+    if (data.teamAName) document.getElementById('team-a-name').value = data.teamAName;
+    if (data.teamBName) document.getElementById('team-b-name').value = data.teamBName;
+  } catch(e) {
+    console.warn('localStorage load failed:', e);
+  }
+}
+
+function clearSeasonData() {
+  if (!confirm('Clear all season data? This cannot be undone.')) return;
+  Object.keys(seasonData).forEach(k => delete seasonData[k]);
+  saveToStorage();
+  renderSeasonTracker();
+}
+
+let _toastTimer;
+function showToast(msg) {
+  const el = document.getElementById('storage-toast');
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove('show'), 2000);
+}
+
+// Scoring mode: 'frame' (default) | 'endgame'
+let scoringMode = 'frame';
+
+// ─── GAME / TURN STATE ───────────────────────
+let gameStarted = false;       // true once Lock In is pressed
+let lockedOrder = [];          // bowler IDs in play order
+let activeBowlerIdx = 0;       // index into lockedOrder
+
+// ─── BOWLER SECTION COLLAPSE ────────────────
+let bowlerSectionOpen = true;
+
+// Season tracking
+let currentWeek = 1;
+// seasonData[playerName] = [ {week, score}, ... ]
+const seasonData = {};
+
+function createBowler(name = 'BOWLER', team = 'none') {
+  return {
+    id: nextId++,
+    name,
+    team,
+    handicap: 0,
+    active: false,
+    frames: Array.from({ length: 10 }, () => ({ rolls: [], score: null })),
+    currentFrame: 0,
+    consecutiveStrikes: 0,
+    endGameScore: null,
+  };
+}
+
+// ─────────────────────────────────────────────
+//  BOWLING SCORE ENGINE
+// ─────────────────────────────────────────────
+function recalcRunning(frames) {
+  const allRolls = [];
+  frames.forEach(f => f.rolls.forEach(r => allRolls.push(r)));
+
+  const raw = [];
+  let rollIdx = 0;
+
+  for (let f = 0; f < 10; f++) {
+    const fr = frames[f].rolls;
+    if (!fr.length) { raw.push(null); continue; }
+
+    if (f < 9) {
+      if (fr[0] === 10) {
+        const b1 = allRolls[rollIdx + 1] ?? null;
+        const b2 = allRolls[rollIdx + 2] ?? null;
+        if (b1 === null || b2 === null) { raw.push(null); rollIdx += 1; continue; }
+        raw.push(10 + b1 + b2);
+        rollIdx += 1;
+      } else {
+        if (fr.length < 2) { raw.push(null); rollIdx += fr.length; continue; }
+        if (fr[0] + fr[1] === 10) {
+          const b1 = allRolls[rollIdx + 2] ?? null;
+          if (b1 === null) { raw.push(null); rollIdx += 2; continue; }
+          raw.push(10 + b1);
+        } else {
+          raw.push(fr[0] + fr[1]);
+        }
+        rollIdx += 2;
+      }
+    } else {
+      if (fr.length < 2) { raw.push(null); break; }
+      raw.push(fr.reduce((a, b) => a + b, 0));
+      rollIdx += fr.length;
+    }
+  }
+
+  // Convert to running totals
+  const running = [];
+  let sum = 0;
+  for (let i = 0; i < 10; i++) {
+    if (raw[i] === null) { running.push(null); }
+    else { sum += raw[i]; running.push(sum); }
+  }
+  return running;
+}
+
+function getBowlerTotal(b) {
+  if (scoringMode === 'endgame') {
+    return b.endGameScore !== null ? parseInt(b.endGameScore) : 0;
+  }
+  const scores = recalcRunning(b.frames);
+  for (let i = 9; i >= 0; i--) { if (scores[i] !== null) return scores[i]; }
+  return 0;
+}
+
+// ─────────────────────────────────────────────
+//  ROLL LOGIC
+// ─────────────────────────────────────────────
+function getValidRolls(b) {
+  const cf = b.currentFrame;
+  if (cf > 9) return [];
+  const rolls = b.frames[cf].rolls;
+  const options = [];
+
+  if (cf < 9) {
+    if (rolls.length === 0) {
+      for (let i = 0; i <= 10; i++) options.push(i);
+    } else {
+      for (let i = 0; i <= 10 - rolls[0]; i++) options.push(i);
+    }
+  } else {
+    if (rolls.length === 0) {
+      for (let i = 0; i <= 10; i++) options.push(i);
+    } else if (rolls.length === 1) {
+      if (rolls[0] === 10) { for (let i = 0; i <= 10; i++) options.push(i); }
+      else { for (let i = 0; i <= 10 - rolls[0]; i++) options.push(i); }
+    } else if (rolls.length === 2) {
+      if (rolls[0] === 10 && rolls[1] === 10) {
+        // strike + strike → pins fully reset, 0–10
+        for (let i = 0; i <= 10; i++) options.push(i);
+      } else if (rolls[0] === 10 && rolls[1] < 10) {
+        // strike + non-strike → knock down remaining pins from 2nd ball
+        for (let i = 0; i <= 10 - rolls[1]; i++) options.push(i);
+      } else if (rolls[0] + rolls[1] === 10) {
+        // spare → pins reset, 0–10
+        for (let i = 0; i <= 10; i++) options.push(i);
+      }
+      // else: open frame, no 3rd ball
+    }
+  }
+  return options;
+}
+
+function isFrameComplete(b, frameIdx) {
+  const f = b.frames[frameIdx];
+  if (frameIdx < 9) {
+    return f.rolls.length === 2 || f.rolls[0] === 10;
+  } else {
+    if (f.rolls.length < 2) return false;
+    if (f.rolls[0] === 10 || f.rolls[0] + f.rolls[1] === 10) return f.rolls.length === 3;
+    return f.rolls.length === 2;
+  }
+}
+
+function recordRoll(bowlerId, pins) {
+  const b = bowlers.find(x => x.id === bowlerId);
+  if (!b || b.currentFrame > 9) return;
+  const cf = b.currentFrame;
+  b.frames[cf].rolls.push(pins);
+
+  if (cf < 9 && pins === 10) { b.consecutiveStrikes++; }
+  else if (cf < 9) { b.consecutiveStrikes = 0; }
+
+  const frameJustCompleted = isFrameComplete(b, cf);
+  if (frameJustCompleted) {
+    if (cf < 9) b.currentFrame++;
+    else b.currentFrame = 10;
+  }
+
+  animateBowl(b, pins, cf);
+  updateStreakBar(b);
+  renderBowler(b);
+  updateTeamScores();
+  updateGlobalFrame();
+  updateHeroStats();
+
+  // Auto-advance to next bowler when game is locked in and a frame completes
+  if (gameStarted && scoringMode === 'frame' && frameJustCompleted) {
+    const activeId = lockedOrder[activeBowlerIdx];
+    if (b.id === activeId) {
+      setTimeout(advanceActiveBowler, 2400);
+    }
+  }
+}
+
+// ─────────────────────────────────────────────
+//  PIN DISPLAY (triangular layout)
+// ─────────────────────────────────────────────
+// Pin index layout — columns left (tip/pin1) to right (back row):
+//  Col 1 (tip/left):  [0]       → pin 1
+//  Col 2:             [1,2]     → pins 2,3
+//  Col 3:             [3,4,5]   → pins 4,5,6
+//  Col 4 (back/right):[6,7,8,9] → pins 7,8,9,10
+const PIN_COLS = [[0],[1,2],[3,4,5],[6,7,8,9]];
+
+function buildPins(standing) {
+  const container = document.getElementById('pin-display');
+  container.innerHTML = '';
+  PIN_COLS.forEach(col => {
+    const colDiv = document.createElement('div');
+    colDiv.className = 'pin-col';
+    col.forEach(idx => {
+      const pin = document.createElement('div');
+      pin.className = 'pin' + (standing.includes(idx) ? '' : ' down');
+      colDiv.appendChild(pin);
+    });
+    container.appendChild(colDiv);
+  });
+}
+
+function animateBowl(bowler, pins, frameIdx) {
+  const ball  = document.getElementById('bowling-ball');
+  const flash = document.getElementById('strike-flash');
+
+  // Determine standing pins BEFORE this roll
+  let standing = [0,1,2,3,4,5,6,7,8,9];
+  const rollsInFrame = bowler.frames[frameIdx].rolls;
+  if (rollsInFrame.length > 1) {
+    const knocked = rollsInFrame[0];
+    standing = standing.slice(knocked);
+  }
+  buildPins(standing);
+
+  // Trigger bowler figure throw pulse
+  const fig = document.getElementById('bowler-figure');
+  if (fig) {
+    fig.classList.remove('throwing');
+    void fig.offsetWidth; // reflow to restart animation
+    fig.classList.add('throwing');
+    setTimeout(() => fig.classList.remove('throwing'), 600);
+  }
+
+  ball.className = 'ball';
+  void ball.offsetWidth;
+  ball.className = 'ball rolling';
+
+  // Determine impact type
+  let impactType;
+  if (pins === 0) {
+    impactType = 'gutter';
+  } else if (pins === 10 && standing.length === 10) {
+    impactType = 'strike';
+  } else if (standing.length > 0 && pins >= standing.length) {
+    impactType = 'spare';
+  } else {
+    impactType = 'hit';
+  }
+
+  // Impact fires when ball reaches the pin deck (~82% of 1.5s = 1230ms)
+  setTimeout(() => {
+    // Update pin state
+    if (pins >= standing.length) {
+      buildPins([]);
+    } else {
+      buildPins(standing.slice(pins));
+    }
+    // Trigger visual impact
+    triggerImpact(impactType, flash);
+  }, 1260);
+}
+
+function triggerImpact(type, flashEl) {
+  const laneTrack = document.getElementById('lane-track');
+  const pinDisp   = document.getElementById('pin-display');
+  if (!laneTrack || !pinDisp) return;
+
+  const trackRect = laneTrack.getBoundingClientRect();
+  const pinRect   = pinDisp.getBoundingClientRect();
+  // Center of the pin deck relative to lane-track
+  const cx = pinRect.left - trackRect.left + pinRect.width  * 0.5;
+  const cy = pinRect.top  - trackRect.top  + pinRect.height * 0.5;
+
+  if (type === 'gutter') {
+    // Lane shake — delayed slightly so ball appears to reach the gutter end
+    laneTrack.classList.add('shaking');
+    setTimeout(() => laneTrack.classList.remove('shaking'), 600);
+    return;
+  }
+
+  if (type === 'strike') {
+    // Bright flash + large burst
+    if (flashEl) {
+      flashEl.className = 'strike-flash active';
+      setTimeout(() => { flashEl.className = 'strike-flash'; }, 1100);
+    }
+    // 3 staggered waves of particles
+    spawnBurst(laneTrack, cx, cy, 'strike', 10, 0);
+    spawnBurst(laneTrack, cx, cy, 'strike', 7,  80);
+    spawnBurst(laneTrack, cx, cy, 'strike', 5,  160);
+  } else if (type === 'spare') {
+    spawnBurst(laneTrack, cx, cy, 'spare', 7, 0);
+    spawnBurst(laneTrack, cx, cy, 'spare', 4, 100);
+  } else {
+    // Partial hit — small sparks
+    spawnBurst(laneTrack, cx, cy, 'hit', 3, 0);
+  }
+}
+
+function spawnBurst(container, cx, cy, type, count, delayMs) {
+  setTimeout(() => {
+    for (let i = 0; i < count; i++) {
+      const p       = document.createElement('div');
+      const angle   = Math.random() * 360;
+      const maxDist = type === 'strike' ? 28 + Math.random() * 20
+                    : type === 'spare'  ? 16 + Math.random() * 14
+                    :                      8 + Math.random() *  8;
+      const dx  = Math.cos(angle * Math.PI / 180) * maxDist;
+      const dy  = Math.sin(angle * Math.PI / 180) * maxDist;
+      const sz  = type === 'strike' ? 4 + Math.random() * 5
+                : type === 'spare'  ? 3 + Math.random() * 3
+                :                     2 + Math.random() * 2;
+      const dur = 0.38 + Math.random() * 0.32;
+
+      p.className = `impact-particle impact-${type}`;
+      p.style.cssText = `left:${cx}px;top:${cy}px;width:${sz}px;height:${sz}px;` +
+        `--dx:${dx}px;--dy:${dy}px;--dur:${dur}s;animation-duration:${dur}s;`;
+      container.appendChild(p);
+      setTimeout(() => p.remove(), dur * 1000 + 100);
+    }
+  }, delayMs);
+}
+
+
+function updateStreakBar(b) {
+  const el = document.getElementById('streak-icons');
+  const lbl = document.getElementById('streak-label-text');
+  if (!el || !lbl) return;
+  const s = b.consecutiveStrikes;
+
+  if (s === 0) {
+    el.innerHTML = '<span style="color:var(--muted2);font-size:0.62rem;font-family:\'Oswald\',sans-serif;letter-spacing:2px">— None —</span>';
+    lbl.textContent = '';
+    return;
+  }
+
+  let html = `<span class="streak-name">${b.name}:</span>`;
+  for (let i = 0; i < s; i++) html += '<span class="streak-x">X</span>';
+  el.innerHTML = html;
+
+  if (s === 1)      lbl.textContent = '';
+  else if (s === 2) lbl.textContent = 'Double';
+  else if (s === 3) lbl.textContent = 'Turkey';
+  else if (s === 4) lbl.textContent = 'Four-Bagger';
+  else if (s === 5) lbl.textContent = 'Five-Bagger';
+  else              lbl.textContent = `${s}-Bagger`;
+}
+
+// ─────────────────────────────────────────────
+//  RENDER BOWLER CARD
+// ─────────────────────────────────────────────
+function buildBowlerCard(b) {
+  const teamClass = b.team === 'a' ? 'team-a-card' : b.team === 'b' ? 'team-b-card' : '';
+  const activeClass = b.active ? 'active-card' : '';
+  const scores = recalcRunning(b.frames);
+
+  let scoreRows = '';
+  for (let f = 0; f < 10; f++) {
+    const frame = b.frames[f];
+    const isTenth = f === 9;
+    const score = scores[f];
+    const rolls = frame.rolls;
+    const isCurrent = (f === b.currentFrame && b.currentFrame <= 9);
+
+    let rollsHtml = '';
+    if (f < 9) {
+      if (rolls[0] === 10) {
+        rollsHtml += `<div class="roll-badge roll-X" onclick="undoRoll(${b.id},${f},0)">X</div>`;
+      } else if (rolls[0] !== undefined) {
+        rollsHtml += `<div class="roll-badge ${rolls[0] === 0 ? 'roll-gutter' : 'roll-num'}" onclick="undoRoll(${b.id},${f},0)">${rolls[0] === 0 ? '—' : rolls[0]}</div>`;
+        if (rolls[1] !== undefined) {
+          if (rolls[0] + rolls[1] === 10) {
+            rollsHtml += `<div class="roll-badge roll-spare" onclick="undoRoll(${b.id},${f},1)">/</div>`;
+          } else {
+            rollsHtml += `<div class="roll-badge ${rolls[1] === 0 ? 'roll-gutter' : 'roll-num'}" onclick="undoRoll(${b.id},${f},1)">${rolls[1] === 0 ? '—' : rolls[1]}</div>`;
+          }
+        }
+      }
+    } else {
+      rolls.forEach((r, i) => {
+        let badge = '';
+        if (r === 10) {
+          badge = `<div class="roll-badge roll-X" onclick="undoRoll(${b.id},9,${i})">X</div>`;
+        } else if (i > 0 && rolls[i-1] !== 10 && rolls[i-1] + r === 10) {
+          badge = `<div class="roll-badge roll-spare" onclick="undoRoll(${b.id},9,${i})">/</div>`;
+        } else {
+          badge = `<div class="roll-badge ${r === 0 ? 'roll-gutter' : 'roll-num'}" onclick="undoRoll(${b.id},9,${i})">${r === 0 ? '—' : r}</div>`;
+        }
+        rollsHtml += badge;
+      });
+    }
+
+    const cellClass = ['frame-cell', isTenth ? 'tenth-frame' : '', score !== null ? 'has-score' : '', isCurrent ? 'current-frame' : ''].filter(Boolean).join(' ');
+    scoreRows += `<td class="${cellClass}" id="fc-${b.id}-${f}">
+      <div class="cell-rolls">${rollsHtml}</div>
+      <div class="frame-score">${score !== null ? score : ''}</div>
+    </td>`;
+  }
+
+  const total = getBowlerTotal(b);
+  const hcpTotal = total + parseInt(b.handicap || 0);
+
+  const isDone = b.currentFrame > 9;
+  const validRolls = getValidRolls(b);
+  const cf = b.currentFrame;
+  const fr = !isDone ? b.frames[cf].rolls : [];
+
+  let btnHtml = '';
+  if (!isDone) {
+    btnHtml += `<span class="frame-indicator">Frame <strong>${cf + 1}</strong> · Roll <strong>${fr.length + 1}</strong></span>`;
+    validRolls.forEach(pins => {
+      let cls = 'throw-btn';
+      let lbl = String(pins);
+      if (pins === 10) {
+        // Strike whenever 10 pins knocked down on a fresh rack
+        cls += ' strike'; lbl = 'X';
+      } else if (pins === 0) {
+        cls += ' gutter-btn'; lbl = 'G';
+      } else {
+        // Spare: completing all remaining pins (< 10, so not a strike)
+        let isSpare = false;
+        if (cf < 9 && fr.length === 1) {
+          // Frames 1–9, 2nd ball: spare off the first ball
+          isSpare = (pins + fr[0] === 10);
+        } else if (cf === 9) {
+          if (fr.length === 1 && fr[0] < 10) {
+            // 10th ball 2 after a non-strike: spare off ball 1
+            isSpare = (pins + fr[0] === 10);
+          } else if (fr.length === 2 && fr[0] === 10 && fr[1] < 10) {
+            // 10th ball 3 after strike + non-strike: spare off ball 2
+            isSpare = (pins + fr[1] === 10);
+          }
+          // After two strikes or a spare, ball 3 is on a fresh rack — no / label
+        }
+        if (isSpare) { cls += ' spare-btn'; lbl = '/'; }
+      }
+      btnHtml += `<button class="${cls}" onclick="recordRoll(${b.id},${pins})">${lbl}</button>`;
+    });
+    btnHtml += `<button class="clear-frame-btn" onclick="clearCurrentFrame(${b.id})">↺ Frame</button>`;
+  } else {
+    btnHtml = `<span class="complete-status">✓ Game Complete</span>`;
+  }
+
+  const teamOptions = ['none','a','b'].map(t =>
+    `<option value="${t}" ${b.team === t ? 'selected' : ''}>${t === 'none' ? 'No Team' : t === 'a' ? 'Team A' : 'Team B'}</option>`
+  ).join('');
+
+  const nameField = b.team === 'a'
+    ? `<select class="roster-select" onchange="setRosterPlayer(${b.id},this.value)">
+        <option value="">— Select Player —</option>
+        ${TEAM_A_ROSTER.map(n => `<option value="${n}" ${b.name === n ? 'selected' : ''}>${n}</option>`).join('')}
+       </select>`
+    : `<input class="bowler-name-input" value="${b.name}" maxlength="16"
+         onchange="renameBowler(${b.id},this.value)" />`;
+
+  return `<div class="bowler-card ${teamClass} ${activeClass}" id="bowler-${b.id}">
+    <div class="card-header">
+      ${nameField}
+      <div class="card-controls">
+        <select class="team-select" onchange="assignTeam(${b.id},this.value)">${teamOptions}</select>
+        <span class="hcp-label">Hcp</span>
+        <input class="hcp-input" type="number" value="${b.handicap}" min="0" max="300"
+          onchange="setHandicap(${b.id},+this.value)" />
+        ${!gameStarted ? `<button class="active-toggle ${b.active ? 'on' : ''}" onclick="toggleActive(${b.id})">${b.active ? '▶ Up Now' : 'Set Active'}</button>` : b.active ? `<span class="active-toggle on" style="pointer-events:none">▶ Up Now</span>` : ''}
+        <button class="remove-btn" onclick="removeBowler(${b.id})" title="Remove bowler">✕</button>
+      </div>
+    </div>
+    ${scoringMode === 'endgame' ? `
+    <div class="endgame-body">
+      <div class="endgame-score-wrap">
+        <span class="endgame-label">Final Score</span>
+        <input type="number" class="endgame-score-input"
+          value="${b.endGameScore !== null ? b.endGameScore : ''}"
+          min="0" max="300" placeholder="0 – 300"
+          oninput="setEndGameScore(${b.id}, this.value)" />
+      </div>
+      <div class="endgame-hcp-wrap">
+        <span class="endgame-label">Score + Hcp</span>
+        <span class="endgame-hcp-val" id="eg-hcp-${b.id}">${b.endGameScore !== null ? parseInt(b.endGameScore) + parseInt(b.handicap || 0) : '—'}</span>
+      </div>
+    </div>` : `
+    <div class="score-sheet">
+      <table class="score-table">
+        <thead><tr>
+          ${Array.from({length:10},(_,i)=>`<th>${i+1}${i===9?'<br><span style="font-size:0.45rem;font-weight:400;color:var(--muted2)">10th</span>':''}</th>`).join('')}
+          <th class="th-total">Tot</th>
+          <th>+Hcp</th>
+        </tr></thead>
+        <tbody><tr>
+          ${scoreRows}
+          <td class="total-cell">${total || ''}</td>
+          <td class="hcp-total-cell">${total ? hcpTotal : ''}</td>
+        </tr></tbody>
+      </table>
+    </div>
+    <div class="input-panel">
+      <div class="input-row">${btnHtml}</div>
+    </div>`}
+  </div>`;
+}
+
+function renderBowler(b) {
+  const existing = document.getElementById(`bowler-${b.id}`);
+  if (existing) {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = buildBowlerCard(b);
+    existing.replaceWith(tmp.firstChild);
+  }
+}
+
+// ─────────────────────────────────────────────
+//  BOWLER MANAGEMENT
+// ─────────────────────────────────────────────
+function addBowler() {
+  if (bowlers.length >= MAX_BOWLERS) { alert('Maximum 6 bowlers per game.'); return; }
+  const b = createBowler(`BOWLER ${bowlers.length + 1}`);
+  bowlers.push(b);
+  renderAll();
+  updateTeamScores();
+}
+
+function removeBowler(id) {
+  bowlers = bowlers.filter(b => b.id !== id);
+  renderAll();
+  updateTeamScores();
+}
+
+function renameBowler(id, name) {
+  const b = bowlers.find(x => x.id === id);
+  if (b) { b.name = name.toUpperCase(); updateTeamScores(); }
+}
+
+function setRosterPlayer(id, name) {
+  const b = bowlers.find(x => x.id === id);
+  if (b && name) { b.name = name; renderBowler(b); updateTeamScores(); }
+}
+
+function assignTeam(id, team) {
+  const b = bowlers.find(x => x.id === id);
+  if (b) { b.team = team; renderBowler(b); updateTeamScores(); }
+}
+
+function setHandicap(id, hcp) {
+  const b = bowlers.find(x => x.id === id);
+  if (b) { b.handicap = hcp; renderBowler(b); updateTeamScores(); }
+}
+
+function toggleActive(id) {
+  bowlers.forEach(b => { b.active = (b.id === id) ? !b.active : false; });
+  bowlers.forEach(b => renderBowler(b));
+}
+
+function clearCurrentFrame(id) {
+  const b = bowlers.find(x => x.id === id);
+  if (!b || b.currentFrame > 9) return;
+  b.frames[b.currentFrame].rolls = [];
+  b.consecutiveStrikes = Math.max(0, b.consecutiveStrikes - 1);
+  renderBowler(b);
+  updateTeamScores();
+}
+
+function undoRoll(id, frameIdx, rollIdx) {
+  const b = bowlers.find(x => x.id === id);
+  if (!b) return;
+  b.frames[frameIdx].rolls.splice(rollIdx, 1);
+  if (frameIdx <= b.currentFrame && !isFrameComplete(b, frameIdx)) {
+    b.currentFrame = frameIdx;
+  }
+  // Recount streaks from scratch
+  let streak = 0;
+  for (let f = 0; f < 10; f++) {
+    if (b.frames[f].rolls[0] === 10 && f < 9) streak++;
+    else streak = 0;
+  }
+  b.consecutiveStrikes = streak;
+  renderBowler(b);
+  updateTeamScores();
+  updateStreakBar(b);
+}
+
+function resetGame() {
+  if (!confirm('Reset all scores and start a new game?')) return;
+  // Reset game/turn state
+  gameStarted = false;
+  lockedOrder = [];
+  activeBowlerIdx = 0;
+  const lockBtn = document.getElementById('lock-in-btn');
+  if (lockBtn) { lockBtn.textContent = '🔒 Lock In Order'; lockBtn.classList.remove('locked'); }
+  bowlers.forEach(b => {
+    b.frames = Array.from({ length: 10 }, () => ({ rolls: [], score: null }));
+    b.currentFrame = 0;
+    b.consecutiveStrikes = 0;
+    b.endGameScore = null;
+    b.active = false;
+  });
+  bowlers.forEach(b => renderBowler(b));
+  updateTeamScores();
+  updateGlobalFrame();
+  document.getElementById('streak-icons').innerHTML =
+    '<span style="color:var(--muted2);font-size:0.62rem;font-family:\'Oswald\',sans-serif;letter-spacing:2px">— None —</span>';
+  document.getElementById('streak-label-text').textContent = '';
+}
+
+// ─────────────────────────────────────────────
+//  WEEK & SEASON
+// ─────────────────────────────────────────────
+function setWeek(val) {
+  currentWeek = Math.max(1, Math.round(val) || 1);
+  document.getElementById('current-week-display').value = currentWeek;
+  saveToStorage();
+}
+
+function changeWeek(delta) {
+  setWeek(currentWeek + delta);
+}
+
+function saveGameToSeason() {
+  const teamA = bowlers.filter(b => b.team === 'a');
+  if (teamA.length === 0) {
+    alert('No Team A (Gutter & Sons) bowlers to save.');
+    return;
+  }
+  const completed = scoringMode === 'endgame'
+    ? teamA.filter(b => b.endGameScore !== null)
+    : teamA.filter(b => b.currentFrame > 9);
+  const incomplete = scoringMode === 'endgame'
+    ? teamA.filter(b => b.endGameScore === null)
+    : teamA.filter(b => b.currentFrame <= 9);
+
+  if (completed.length === 0) {
+    const hint = scoringMode === 'endgame'
+      ? 'No scores entered yet. Enter a final score for each bowler first.'
+      : 'No completed games to save. Finish the game first.';
+    alert(hint);
+    return;
+  }
+
+  let saved = [];
+  completed.forEach(b => {
+    const score = getBowlerTotal(b);
+    if (!seasonData[b.name]) seasonData[b.name] = [];
+    // Overwrite if same week already exists, otherwise add
+    const existing = seasonData[b.name].findIndex(g => g.week === currentWeek);
+    if (existing >= 0) {
+      seasonData[b.name][existing].score = score;
+    } else {
+      seasonData[b.name].push({ week: currentWeek, score });
+    }
+    // Sort by week
+    seasonData[b.name].sort((a, b) => a.week - b.week);
+    saved.push(`${b.name}: ${score}`);
+  });
+
+  renderSeasonTracker();
+  updateHeroStats();
+  saveToStorage();
+
+  const msg = `Week ${currentWeek} saved:\n${saved.join('\n')}` +
+    (incomplete.length ? `\n\nNot saved (game not finished): ${incomplete.map(b=>b.name).join(', ')}` : '');
+  alert(msg);
+}
+
+function renderSeasonTracker() {
+  const container = document.getElementById('season-tracker');
+  const allNames = Object.keys(seasonData);
+
+  if (allNames.length === 0) {
+    container.innerHTML = '<div class="season-empty">No games saved yet — bowl a game and click "Save to Season"</div>';
+    return;
+  }
+
+  // Find all weeks that have been played
+  const allWeeks = [...new Set(
+    Object.values(seasonData).flatMap(games => games.map(g => g.week))
+  )].sort((a, b) => a - b);
+
+  // Build header row
+  let thead = `<tr>
+    <th class="col-name">Bowler</th>
+    ${allWeeks.map(w => `<th>Wk ${w}</th>`).join('')}
+    <th class="col-stat">Avg</th>
+    <th class="col-stat">High</th>
+    <th class="col-stat">Hcp</th>
+  </tr>`;
+
+  // Build data rows — use TEAM_A_ROSTER order for display, then any others
+  const orderedNames = [
+    ...TEAM_A_ROSTER.filter(n => allNames.includes(n)),
+    ...allNames.filter(n => !TEAM_A_ROSTER.includes(n))
+  ];
+
+  let tbody = orderedNames.map(name => {
+    const games = seasonData[name] || [];
+    const scoreMap = Object.fromEntries(games.map(g => [g.week, g.score]));
+    const scores = games.map(g => g.score);
+    const avg = scores.length ? Math.round(scores.reduce((a,b)=>a+b,0) / scores.length) : null;
+    const high = scores.length ? Math.max(...scores) : null;
+    const hcp = avg !== null ? Math.max(0, Math.round((200 - avg) * 0.70)) : null;
+
+    const weekCells = allWeeks.map(w => {
+      if (scoreMap[w] === undefined) return `<td class="td-empty">—</td>`;
+      const isHigh = scoreMap[w] === high && scores.length > 1;
+      return `<td class="td-score${isHigh ? ' high' : ''}">${scoreMap[w]}</td>`;
+    }).join('');
+
+    return `<tr>
+      <td class="td-name">${name}</td>
+      ${weekCells}
+      <td class="td-avg">${avg !== null ? avg : '—'}</td>
+      <td class="td-high">${high !== null ? high : '—'}</td>
+      <td class="td-hcp">${hcp !== null ? hcp : '—'}</td>
+    </tr>`;
+  }).join('');
+
+  container.innerHTML = `<div class="season-table-wrap">
+    <table class="season-table">
+      <thead>${thead}</thead>
+      <tbody>${tbody}</tbody>
+    </table>
+  </div>`;
+}
+
+// ─────────────────────────────────────────────
+//  SCORING MODE
+// ─────────────────────────────────────────────
+function setScoringMode(mode) {
+  // If switching away from frame mode, unlock any active game
+  if (mode !== 'frame' && gameStarted) {
+    gameStarted = false;
+    lockedOrder = [];
+    activeBowlerIdx = 0;
+    bowlers.forEach(b => { b.active = false; });
+  }
+  scoringMode = mode;
+  document.getElementById('mode-btn-frame').classList.toggle('active', mode === 'frame');
+  document.getElementById('mode-btn-endgame').classList.toggle('active', mode === 'endgame');
+  // Hide lane/streak UI in end game mode — not relevant
+  document.getElementById('lane-container').style.display = mode === 'frame' ? '' : 'none';
+  document.querySelector('.streak-bar').style.display     = mode === 'frame' ? '' : 'none';
+  // Show Lock In button only in frame mode
+  const lockWrap = document.getElementById('lock-in-wrap');
+  if (lockWrap) lockWrap.classList.toggle('visible', mode === 'frame');
+  renderAll();
+  updateTeamScores();
+}
+
+function setEndGameScore(id, val) {
+  const b = bowlers.find(x => x.id === id);
+  if (!b) return;
+  b.endGameScore = (val === '' || isNaN(val)) ? null : Math.max(0, Math.min(300, parseInt(val)));
+  updateTeamScores();
+  // Re-render just the hcp total in the card without full rebuild
+  const hcpEl = document.getElementById(`eg-hcp-${id}`);
+  if (hcpEl) {
+    const raw = b.endGameScore !== null ? b.endGameScore : 0;
+    hcpEl.textContent = b.endGameScore !== null ? raw + parseInt(b.handicap || 0) : '—';
+  }
+}
+
+// ─────────────────────────────────────────────
+//  TEAM SCORES
+// ─────────────────────────────────────────────
+function updateTeamScores() {
+  const teamA = bowlers.filter(b => b.team === 'a');
+  const teamB = bowlers.filter(b => b.team === 'b');
+  const rawA  = teamA.reduce((s, b) => s + getBowlerTotal(b), 0);
+  const rawB  = teamB.reduce((s, b) => s + getBowlerTotal(b), 0);
+  const hcpA  = teamA.reduce((s, b) => s + getBowlerTotal(b) + parseInt(b.handicap || 0), 0);
+  const hcpB  = teamB.reduce((s, b) => s + getBowlerTotal(b) + parseInt(b.handicap || 0), 0);
+
+  document.getElementById('team-a-score').textContent     = rawA;
+  document.getElementById('team-b-score').textContent     = rawB;
+  document.getElementById('team-a-hcp-score').textContent = hcpA;
+  document.getElementById('team-b-hcp-score').textContent = hcpB;
+  document.getElementById('bowler-count').textContent     = bowlers.length;
+
+  // Handicap differential — show badge on the team with higher total handicap
+  const totalHcpA = teamA.reduce((s, b) => s + parseInt(b.handicap || 0), 0);
+  const totalHcpB = teamB.reduce((s, b) => s + parseInt(b.handicap || 0), 0);
+  const diff = Math.abs(totalHcpA - totalHcpB);
+  const badgeA = document.getElementById('hcp-diff-a');
+  const badgeB = document.getElementById('hcp-diff-b');
+  if (badgeA && badgeB) {
+    if (diff === 0) {
+      badgeA.textContent = '';
+      badgeB.textContent = '';
+    } else if (totalHcpA > totalHcpB) {
+      badgeA.textContent = `+${diff} HCP`;
+      badgeB.textContent = '';
+    } else {
+      badgeA.textContent = '';
+      badgeB.textContent = `+${diff} HCP`;
+    }
+  }
+}
+
+function updateGlobalFrame() {
+  const maxFrame = bowlers.reduce((m, b) => Math.max(m, b.currentFrame), 0);
+  document.getElementById('global-frame').textContent = `Frame ${Math.min(maxFrame + 1, 10)}`;
+}
+
+// ─────────────────────────────────────────────
+//  FULL RENDER
+// ─────────────────────────────────────────────
+function renderAll() {
+  const grid = document.getElementById('bowlers-grid');
+  grid.innerHTML = '';
+  bowlers.forEach(b => {
+    const div = document.createElement('div');
+    div.innerHTML = buildBowlerCard(b);
+    grid.appendChild(div.firstChild);
+  });
+  document.getElementById('bowler-count').textContent = bowlers.length;
+  refreshSectionHeight();
+}
+
+// ─────────────────────────────────────────────
+//  COLLAPSIBLE SECTIONS
+// ─────────────────────────────────────────────
+let controlsSectionOpen = true;
+
+function toggleControlsSection() {
+  controlsSectionOpen = !controlsSectionOpen;
+  const wrap = document.getElementById('controls-wrap');
+  const btn  = document.getElementById('controls-section-toggle');
+  if (controlsSectionOpen) {
+    wrap.style.maxHeight = 'none';
+    wrap.classList.remove('collapsed');
+    btn.textContent = '▲ Hide';
+  } else {
+    wrap.style.maxHeight = wrap.scrollHeight + 'px';
+    requestAnimationFrame(() => {
+      wrap.classList.add('collapsed');
+      wrap.style.maxHeight = '0';
+    });
+    btn.textContent = '▼ Show';
+  }
+}
+
+function toggleBowlerSection() {
+  bowlerSectionOpen = !bowlerSectionOpen;
+  const wrap = document.getElementById('bowlers-grid-wrap');
+  const btn  = document.getElementById('bowler-section-toggle');
+  if (bowlerSectionOpen) {
+    // measure the grid's natural height so transition works
+    wrap.style.maxHeight = wrap.scrollHeight + 'px';
+    wrap.classList.remove('collapsed');
+    btn.textContent = '▲ Hide';
+  } else {
+    // lock the height first, then collapse in the same frame
+    wrap.style.maxHeight = wrap.scrollHeight + 'px';
+    requestAnimationFrame(() => {
+      wrap.classList.add('collapsed');
+      wrap.style.maxHeight = '0';
+    });
+    btn.textContent = '▼ Show';
+  }
+}
+
+// After renderAll or when section opens, reset the max-height so it
+// stays correct as bowlers are added/removed.
+function refreshSectionHeight() {
+  if (!bowlerSectionOpen) return;
+  const wrap = document.getElementById('bowlers-grid-wrap');
+  if (wrap) wrap.style.maxHeight = 'none'; // let it grow naturally when open
+}
+
+// ─────────────────────────────────────────────
+//  LOCK IN & TURN-BASED PLAY (frame mode only)
+// ─────────────────────────────────────────────
+function lockGame() {
+  if (scoringMode !== 'frame') return;
+
+  if (gameStarted) {
+    // Unlock — reset game state
+    gameStarted = false;
+    lockedOrder = [];
+    activeBowlerIdx = 0;
+    bowlers.forEach(b => { b.active = false; });
+    bowlers.forEach(b => renderBowler(b));
+    const btn = document.getElementById('lock-in-btn');
+    if (btn) { btn.textContent = '🔒 Lock In Order'; btn.classList.remove('locked'); }
+    return;
+  }
+
+  lockedOrder = bowlers.map(b => b.id);
+  if (lockedOrder.length === 0) { alert('Add bowlers before locking in.'); return; }
+
+  gameStarted = true;
+  activeBowlerIdx = 0;
+  updateActiveBowler();
+
+  const btn = document.getElementById('lock-in-btn');
+  if (btn) { btn.textContent = '🔓 Unlock'; btn.classList.add('locked'); }
+}
+
+function updateActiveBowler() {
+  if (!gameStarted) return;
+  const activeId = lockedOrder[activeBowlerIdx];
+  bowlers.forEach(b => { b.active = (b.id === activeId); });
+  bowlers.forEach(b => renderBowler(b));
+  // Scroll active card into view
+  setTimeout(() => {
+    const card = document.getElementById(`bowler-${activeId}`);
+    if (card) card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, 80);
+}
+
+function advanceActiveBowler() {
+  if (!gameStarted) return;
+  // Find next bowler who hasn't finished all 10 frames
+  const total = lockedOrder.length;
+  let found = false;
+  for (let i = 1; i <= total; i++) {
+    const nextIdx = (activeBowlerIdx + i) % total;
+    const nextId  = lockedOrder[nextIdx];
+    const nextB   = bowlers.find(x => x.id === nextId);
+    if (nextB && nextB.currentFrame <= 9) {
+      activeBowlerIdx = nextIdx;
+      found = true;
+      break;
+    }
+  }
+  if (!found) {
+    // Everyone finished — just deactivate
+    bowlers.forEach(b => { b.active = false; });
+    bowlers.forEach(b => renderBowler(b));
+    gameStarted = false;
+    const btn = document.getElementById('lock-in-btn');
+    if (btn) { btn.textContent = '🔒 Lock In Order'; btn.classList.remove('locked'); }
+  } else {
+    updateActiveBowler();
+  }
+}
+
+// ─────────────────────────────────────────────
+//  CLOCK
+// ─────────────────────────────────────────────
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clock').textContent =
+    now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ─────────────────────────────────────────────
+//  HERO STATS
+// ─────────────────────────────────────────────
+function updateHeroStats() {
+  const allScores = Object.values(seasonData).flatMap(games => games.map(g => g.score));
+  const perfectEl  = document.getElementById('hero-stat-perfect');
+  const highEl     = document.getElementById('hero-stat-high');
+  const strikeEl   = document.getElementById('hero-stat-strikes');
+
+  if (perfectEl) {
+    const perfects = allScores.filter(s => s === 300).length;
+    perfectEl.textContent = perfects > 0 ? perfects : '—';
+  }
+  if (highEl) {
+    const high = allScores.length ? Math.max(...allScores) : null;
+    highEl.textContent = high !== null ? high : '—';
+  }
+  if (strikeEl) {
+    // Count strikes across all active bowlers' current frames
+    let totalRolls = 0, strikeCount = 0;
+    bowlers.forEach(b => {
+      b.frames.forEach(f => {
+        f.rolls.forEach(r => { totalRolls++; if (r === 10) strikeCount++; });
+      });
+    });
+    strikeEl.textContent = totalRolls > 0
+      ? Math.round((strikeCount / totalRolls) * 100) + '%'
+      : '—';
+  }
+}
+
+// ─────────────────────────────────────────────
+//  INIT
+// ─────────────────────────────────────────────
+buildPins([0,1,2,3,4,5,6,7,8,9]);
+loadFromStorage();
+renderAll();
+updateTeamScores();
+renderSeasonTracker();
+updateHeroStats();
+// Show Lock In button on initial load (frame mode is default)
+document.getElementById('lock-in-wrap').classList.add('visible');
+</script>
+</body>
+</html>
